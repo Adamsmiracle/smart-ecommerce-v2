@@ -1,0 +1,68 @@
+# ============================================================================
+# Smart E-Commerce System - Application Properties (Base)
+# ============================================================================
+spring:
+  application:
+    name: smart-ecommerce-api-v1
+  profiles:
+    active: dev
+
+  datasource:
+    url: "jdbc:postgresql://localhost:5432/ecommerce_db"
+    username: "app_user"
+    password: "secret123"
+    driver-class-name: ${DATABASE_DRIVER:org.postgresql.Driver}
+
+
+  sql:
+    init:
+      mode: never  # Set to 'always' only if you need to initialize schema
+
+  graphql:
+    graphiql:
+      enabled: true
+
+    schema:
+      locations: classpath:graphql/
+      file-extensions: .graphqls,.graphql
+      printer:
+        enabled: true
+    cors:
+      allowed-origins: "*"
+      allowed-methods: "*"
+    path: /graphql
+
+
+server:
+  port: 9999
+  servlet:
+    context-path: /
+  forward-headers-strategy: framework
+
+logging:
+  level:
+    root: INFO
+    com.smart_ecommerce_api_v1: DEBUG
+    org.hibernate.tool.schema: ERROR
+  pattern:
+    console: "%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
+
+
+springdoc:
+  api-docs:
+    enabled: true
+    path: /v3/api-docs
+    version: OPENAPI_3_0  # Force OpenAPI 3.0 instead of 3.1 (use OPENAPI_3_0 in uppercase)
+  swagger-ui:
+    enabled: true
+    path: /swagger-ui.html
+    # DON'T set config-url or url - let SpringDoc auto-detect them
+    try-it-out-enabled: true
+    operations-sorter: method
+    tags-sorter: alpha
+
+# JWT Configuration
+jwt:
+  secret: bXlTZWNyZXRLZXlGb3JKd3RUb2tlbkdlbmVyYXRpb25UaGF0SXNMb25nRW5vdWdoRm9ySFM1MTJBbGdvcml0aG0xMjM0NQ==
+  expiration: 86400000      # 24 hours in milliseconds
+  refresh-expiration: 604800000  # 7 days in milliseconds

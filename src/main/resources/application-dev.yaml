@@ -1,0 +1,49 @@
+# ============================================================================
+# Smart E-Commerce System - Development Profile
+# ============================================================================
+
+spring:
+  application:
+    name: smart-commerce-api-v1
+
+  datasource:
+    url: "jdbc:postgresql://localhost:5432/ecommerce_db"
+    username: "app_user"
+    password: "secret123"
+    driver-class-name: ${DATABASE_DRIVER:org.postgresql.Driver}
+    hikari:
+      pool-name: SmartEcommerceHikariPool
+      maximum-pool-size: 10
+      minimum-idle: 5
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+
+  sql:
+    init:
+      mode: never  # Schema already created in PostgreSQL
+
+  graphql:
+    graphiql:
+      enabled: false
+    path: /graphql
+
+server:
+  port: 9999
+  servlet:
+    context-path: /
+  forward-headers-strategy: framework
+
+
+springdoc:
+  api-docs:
+    enabled: true
+    path: /v3/api-docs
+    version: OPENAPI_3_0
+  swagger-ui:
+    enabled: true
+    path: /swagger-ui.html
+    try-it-out-enabled: true
+    operations-sorter: method
+    tags-sorter: alpha
+

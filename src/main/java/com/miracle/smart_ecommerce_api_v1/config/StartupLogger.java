@@ -1,0 +1,52 @@
+package com.miracle.smart_ecommerce_api_v1.config;
+
+import org.springframework.boot.ApplicationArguments;
+import org.springframework.boot.ApplicationRunner;
+import org.springframework.core.env.ConfigurableEnvironment;
+import org.springframework.core.env.EnumerablePropertySource;
+import org.springframework.core.env.PropertySource;
+import org.springframework.stereotype.Component;
+
+import java.util.Map;
+import java.util.Properties;
+import java.util.stream.Stream;
+
+@Component
+public class StartupLogger implements ApplicationRunner {
+    private final ConfigurableEnvironment env;
+
+    public StartupLogger(ConfigurableEnvironment env) {
+        this.env = env;
+    }
+
+    @Override
+    public void run(ApplicationArguments args) {
+        System.out.println("[StartupLogger] Listing property sources for spring.jackson keys and env vars containing 'JACKSON'...");
+
+        for (PropertySource<?> ps : env.getPropertySources()) {
+            if (ps instanceof EnumerablePropertySource) {
+                EnumerablePropertySource<?> eps = (EnumerablePropertySource<?>) ps;
+                String[] names = eps.getPropertyNames();
+                Stream.of(names)
+                        .filter(n -> n != null && n.startsWith("spring.jackson"))
+                        .forEach(n -> System.out.println("[PropertySource:" + ps.getName() + "] " + n + "=" + env.getProperty(n)));
+            }
+        }
+
+        System.out.println("[StartupLogger] Checking environment variables containing 'JACKSON' or 'WRITE'...");
+        Map<String, String> map = System.getenv();
+        map.forEach((k, v) -> {
+            if (k.toUpperCase().contains("JACKSON") || k.toUpperCase().contains("WRITE")) {
+                System.out.println("[ENV] " + k + "=" + v);
+            }
+        });
+
+        System.out.println("[StartupLogger] Checking JVM system properties containing 'spring.jackson' or 'WRITE_DATES'...");
+        Properties sysProps = System.getProperties();
+        sysProps.stringPropertyNames().stream()
+                .filter(k -> k != null && (k.startsWith("spring.jackson") || k.toUpperCase().contains("WRITE_DATES") || k.toUpperCase().contains("WRITE-DATES")))
+                .forEach(k -> System.out.println("[SYSPROP] " + k + "=" + sysProps.getProperty(k)));
+
+        System.out.println("[StartupLogger] End of debug dump.");
+    }
+}

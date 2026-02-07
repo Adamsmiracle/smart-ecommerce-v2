@@ -1,0 +1,207 @@
+package com.miracle.smart_ecommerce_api_v1.repository.impl;
+
+import com.miracle.smart_ecommerce_api_v1.common.util.JdbcUtils;
+import com.miracle.smart_ecommerce_api_v1.domain.User;
+import com.miracle.smart_ecommerce_api_v1.exception.ResourceNotFoundException;
+import com.miracle.smart_ecommerce_api_v1.repository.UserRepository;
+import com.miracle.smart_ecommerce_api_v1.repository.mapper.UserMapper;
+import org.springframework.dao.EmptyResultDataAccessException;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
+import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.sql.Timestamp;
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
+
+/**
+ * JDBC implementation of UserRepository.
+ * Uses JdbcTemplate for all database operations.
+ */
+@Repository
+public class UserRepositoryImpl implements UserRepository {
+
+    private final JdbcTemplate jdbcTemplate;
+    private final NamedParameterJdbcTemplate namedJdbcTemplate;
+    private final UserMapper userRowMapper;
+
+    public UserRepositoryImpl(JdbcTemplate jdbcTemplate,
+                              NamedParameterJdbcTemplate namedJdbcTemplate,
+                              UserMapper userRowMapper) {
+        this.jdbcTemplate = jdbcTemplate;
+        this.namedJdbcTemplate = namedJdbcTemplate;
+        this.userRowMapper = userRowMapper;
+    }
+
+    @Override
+    @Transactional
+    public User save(User user) {
+        String sql = """
+            INSERT INTO app_user (email_address, first_name, last_name, phone_number, password_hash, is_active, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            RETURNING id, email_address, first_name, last_name, phone_number, password_hash, is_active, created_at, updated_at
+            """;
+
+        LocalDateTime now = LocalDateTime.now();
+        return jdbcTemplate.queryForObject(sql, userRowMapper,
+                user.getEmailAddress(),
+                user.getFirstName(),
+                user.getLastName(),
+                user.getPhoneNumber(),
+                user.getPasswordHash(),
+                user.getIsActive() != null ? user.getIsActive() : true,
+                Timestamp.valueOf(now),
+                Timestamp.valueOf(now)
+        );
+    }
+
+    @Override
+    @Transactional
+    public User update(User user) {
+        String sql = """
+            UPDATE app_user 
+            SET email_address = ?, first_name = ?, last_name = ?, phone_number = ?, 
+                password_hash = ?, is_active = ?, updated_at = ?
+            WHERE id = ?
+            RETURNING id, email_address, first_name, last_name, phone_number, password_hash, is_active, created_at, updated_at
+            """;
+
+        try {
+            return jdbcTemplate.queryForObject(sql, userRowMapper,
+                    user.getEmailAddress(),
+                    user.getFirstName(),
+                    user.getLastName(),
+                    user.getPhoneNumber(),
+                    user.getPasswordHash(),
+                    user.getIsActive(),
+                    Timestamp.valueOf(LocalDateTime.now()),
+                    user.getId()
+            );
+        } catch (EmptyResultDataAccessException e) {
+            throw ResourceNotFoundException.forResource("User", user.getId());
+        }
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Optional<User> findById(UUID id) {
+        String sql = "SELECT * FROM app_user WHERE id = ?";
+        try {
+            User user = jdbcTemplate.queryForObject(sql, userRowMapper, id);
+            return Optional.ofNullable(user);
+        } catch (EmptyResultDataAccessException e) {
+            return Optional.empty();
+        }
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Optional<User> findByEmail(String email) {
+        String sql = "SELECT * FROM app_user WHERE email_address = ?";
+        try {
+            User user = jdbcTemplate.queryForObject(sql, userRowMapper, email);
+            return Optional.ofNullable(user);
+        } catch (EmptyResultDataAccessException e) {
+            return Optional.empty();
+        }
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<User> findAll() {
+        String sql = "SELECT * FROM app_user ORDER BY created_at DESC";
+        return jdbcTemplate.query(sql, userRowMapper);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<User> findAll(int page, int size) {
+        JdbcUtils.validatePagination(page, size);
+        String sql = "SELECT * FROM app_user ORDER BY created_at DESC LIMIT ? OFFSET ?";
+        return jdbcTemplate.query(sql, userRowMapper, size, JdbcUtils.calculateOffset(page, size));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<User> findActiveUsers(int page, int size) {
+        JdbcUtils.validatePagination(page, size);
+        String sql = "SELECT * FROM app_user WHERE is_active = true ORDER BY created_at DESC LIMIT ? OFFSET ?";
+        return jdbcTemplate.query(sql, userRowMapper, size, JdbcUtils.calculateOffset(page, size));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<User> search(String keyword, int page, int size) {
+        JdbcUtils.validatePagination(page, size);
+        String sql = """
+            SELECT * FROM app_user 
+            WHERE LOWER(first_name) LIKE LOWER(?) 
+               OR LOWER(last_name) LIKE LOWER(?) 
+               OR LOWER(email_address) LIKE LOWER(?)
+            ORDER BY created_at DESC 
+            LIMIT ? OFFSET ?
+            """;
+        String searchPattern = "%" + keyword + "%";
+        return jdbcTemplate.query(sql, userRowMapper,
+                searchPattern, searchPattern, searchPattern,
+                size, JdbcUtils.calculateOffset(page, size));
+    }
+
+    @Override
+    @Transactional
+    public void deleteById(UUID id) {
+        String sql = "DELETE FROM app_user WHERE id = ?";
+        int rowsAffected = jdbcTemplate.update(sql, id);
+        if (rowsAffected == 0) {
+            throw ResourceNotFoundException.forResource("User", id);
+        }
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public boolean existsById(UUID id) {
+        String sql = "SELECT COUNT(*) FROM app_user WHERE id = ?";
+        Integer count = jdbcTemplate.queryForObject(sql, Integer.class, id);
+        return count != null && count > 0;
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public boolean existsByEmail(String email) {
+        String sql = "SELECT COUNT(*) FROM app_user WHERE email_address = ?";
+        Integer count = jdbcTemplate.queryForObject(sql, Integer.class, email);
+        return count != null && count > 0;
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public long count() {
+        String sql = "SELECT COUNT(*) FROM app_user";
+        Long count = jdbcTemplate.queryForObject(sql, Long.class);
+        return count != null ? count : 0;
+    }
+
+
+    @Override
+    @Transactional(readOnly = true)
+    public long countActive() {
+        String sql = "SELECT COUNT(*) FROM app_user WHERE is_active = true";
+        Long count = jdbcTemplate.queryForObject(sql, Long.class);
+        return count != null ? count : 0;
+    }
+
+
+    @Override
+    @Transactional
+    public void setActiveStatus(UUID id, boolean isActive) {
+        String sql = "UPDATE app_user SET is_active = ?, updated_at = ? WHERE id = ?";
+        int rowsAffected = jdbcTemplate.update(sql, isActive, Timestamp.valueOf(LocalDateTime.now()), id);
+        if (rowsAffected == 0) {
+            throw ResourceNotFoundException.forResource("User", id);
+        }
+    }
+}
+
