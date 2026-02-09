@@ -11,11 +11,49 @@ public class ApiCorsConfig implements WebMvcConfigurer {
     public void addCorsMappings(CorsRegistry registry) {
         // General API CORS (for frontend apps consuming REST endpoints)
         registry.addMapping("/api/**")
-                .allowedOrigins("*")
+                .allowedOrigins(
+                        "http://localhost:3000",
+                        "http://localhost:3001",
+                        "http://localhost:3002",
+                        "http://localhost:4200",
+                        "http://localhost:5173",
+                        "http://localhost:8080"
+                )
                 .allowedMethods("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS")
                 .allowedHeaders("*")
-                .exposedHeaders("Content-Disposition")
-                .allowCredentials(false)
+                .exposedHeaders("Content-Disposition", "Authorization", "X-Correlation-Id")
+                .allowCredentials(true)
+                .maxAge(3600);
+
+        // GraphQL endpoint
+        registry.addMapping("/graphql")
+                .allowedOrigins(
+                        "http://localhost:3000",
+                        "http://localhost:3001",
+                        "http://localhost:3002",
+                        "http://localhost:4200",
+                        "http://localhost:5173",
+                        "http://localhost:8080"
+                )
+                .allowedMethods("GET", "POST", "OPTIONS")
+                .allowedHeaders("*")
+                .exposedHeaders("Content-Disposition", "Authorization")
+                .allowCredentials(true)
+                .maxAge(3600);
+
+        // GraphiQL interface
+        registry.addMapping("/graphiql")
+                .allowedOrigins(
+                        "http://localhost:3000",
+                        "http://localhost:3001",
+                        "http://localhost:3002",
+                        "http://localhost:4200",
+                        "http://localhost:5173",
+                        "http://localhost:8080"
+                )
+                .allowedMethods("GET", "POST", "OPTIONS")
+                .allowedHeaders("*")
+                .allowCredentials(true)
                 .maxAge(3600);
 
         // OpenAPI/Swagger docs (so frontend can fetch the spec or embed SwaggerUI)
@@ -48,7 +86,5 @@ public class ApiCorsConfig implements WebMvcConfigurer {
                 .allowedHeaders("*")
                 .allowCredentials(false)
                 .maxAge(3600);
-        registry.addMapping("/graphiql")
-                .allowedOrigins("*");
     }
 }

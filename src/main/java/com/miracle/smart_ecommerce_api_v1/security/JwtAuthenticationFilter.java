@@ -1,7 +1,7 @@
 package com.miracle.smart_ecommerce_api_v1.security;
 
-import com.miracle.smart_ecommerce_api_v1.domain.User;
-import com.miracle.smart_ecommerce_api_v1.repository.UserRepository;
+import com.miracle.smart_ecommerce_api_v1.domain.user.entity.User;
+import com.miracle.smart_ecommerce_api_v1.domain.user.repository.UserRepository;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;

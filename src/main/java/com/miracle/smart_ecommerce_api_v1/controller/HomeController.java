@@ -1,5 +1,7 @@
 package com.miracle.smart_ecommerce_api_v1.controller;
 
+import java.time.OffsetDateTime;
+
 import com.miracle.smart_ecommerce_api_v1.common.response.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -27,7 +29,7 @@ public class HomeController {
         info.put("name", "Smart E-Commerce API");
         info.put("version", "1.0.0");
         info.put("description", "A production-ready e-commerce REST API using raw JDBC");
-        info.put("timestamp", LocalDateTime.now());
+        info.put("timestamp", OffsetDateTime.now());
         info.put("endpoints", Map.of(
                 "users", "/api/users",
                 "products", "/api/products",
@@ -46,7 +48,7 @@ public class HomeController {
     public ResponseEntity<ApiResponse<Map<String, Object>>> health() {
         Map<String, Object> health = new HashMap<>();
         health.put("status", "UP");
-        health.put("timestamp", LocalDateTime.now());
+        health.put("timestamp", OffsetDateTime.now());
         return ResponseEntity.ok(ApiResponse.success(health));
     }
 }

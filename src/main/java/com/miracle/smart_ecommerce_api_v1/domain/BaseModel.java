@@ -7,6 +7,7 @@ import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
 
 import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.util.UUID;
 
 /**
@@ -21,8 +22,8 @@ public abstract class BaseModel {
 
 
     protected UUID id;
-    protected LocalDateTime createdAt;
-    protected LocalDateTime updatedAt;
+    protected OffsetDateTime createdAt;
+    protected OffsetDateTime updatedAt;
 
     /**
      * Check if this is a new (unsaved) entity

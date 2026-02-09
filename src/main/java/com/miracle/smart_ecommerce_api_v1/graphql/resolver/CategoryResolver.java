@@ -1,0 +1,85 @@
+package com.miracle.smart_ecommerce_api_v1.graphql.resolver;
+
+import com.miracle.smart_ecommerce_api_v1.domain.category.dto.CategoryResponse;
+import com.miracle.smart_ecommerce_api_v1.domain.category.dto.CreateCategoryRequest;
+import com.miracle.smart_ecommerce_api_v1.domain.category.service.CategoryService;
+import lombok.RequiredArgsConstructor;
+import org.springframework.graphql.data.method.annotation.Argument;
+import org.springframework.graphql.data.method.annotation.MutationMapping;
+import org.springframework.graphql.data.method.annotation.QueryMapping;
+import org.springframework.stereotype.Controller;
+
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+
+/**
+ * GraphQL Resolver for Category entity.
+ * Handles all category-related queries and mutations.
+ */
+@Controller
+@RequiredArgsConstructor
+public class CategoryResolver {
+
+    private final CategoryService categoryService;
+
+    // ========================================================================
+    // CATEGORY QUERIES
+    // ========================================================================
+
+    @QueryMapping
+    public CategoryResponse category(@Argument UUID id) {
+        return categoryService.getCategoryById(id);
+    }
+
+    @QueryMapping
+    public List<CategoryResponse> categories() {
+        return categoryService.getAllCategories();
+    }
+
+    @QueryMapping
+    public List<CategoryResponse> rootCategories() {
+        return categoryService.getRootCategories();
+    }
+
+    @QueryMapping
+    public List<CategoryResponse> categoryTree() {
+        return categoryService.getCategoryTree();
+    }
+
+    @QueryMapping
+    public List<CategoryResponse> subcategories(@Argument UUID parentId) {
+        return categoryService.getSubcategories(parentId);
+    }
+
+    // ========================================================================
+    // CATEGORY MUTATIONS
+    // ========================================================================
+
+    @MutationMapping
+    public CategoryResponse createCategory(@Argument Map<String, Object> input) {
+        CreateCategoryRequest request = CreateCategoryRequest.builder()
+                .parentCategoryId(input.get("parentCategoryId") != null
+                        ? UUID.fromString((String) input.get("parentCategoryId")) : null)
+                .categoryName((String) input.get("categoryName"))
+                .build();
+        return categoryService.createCategory(request);
+    }
+
+    @MutationMapping
+    public CategoryResponse updateCategory(@Argument UUID id, @Argument Map<String, Object> input) {
+        CreateCategoryRequest request = CreateCategoryRequest.builder()
+                .parentCategoryId(input.get("parentCategoryId") != null
+                        ? UUID.fromString((String) input.get("parentCategoryId")) : null)
+                .categoryName((String) input.get("categoryName"))
+                .build();
+        return categoryService.updateCategory(id, request);
+    }
+
+    @MutationMapping
+    public boolean deleteCategory(@Argument UUID id) {
+        categoryService.deleteCategory(id);
+        return true;
+    }
+}
+

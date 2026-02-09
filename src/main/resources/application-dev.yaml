@@ -29,7 +29,7 @@ spring:
     path: /graphql
 
 server:
-  port: 9999
+  port: 8080
   servlet:
     context-path: /
   forward-headers-strategy: framework

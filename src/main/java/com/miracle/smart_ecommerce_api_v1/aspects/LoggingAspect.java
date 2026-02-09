@@ -22,19 +22,19 @@ public class LoggingAspect {
     /**
      * Pointcut for all service methods
      */
-    @Pointcut("execution(* com.miracle.smart_ecommerce.service.impl.*.*(..))")
+    @Pointcut("execution(* com.miracle.smart_ecommerce_api_v1..service..*.*(..))")
     public void serviceLayerMethods() {}
 
     /**
      * Pointcut for all repository methods
      */
-    @Pointcut("execution(* com.miracle.smart_ecommerce.repository.impl.*.*(..))")
+    @Pointcut("execution(* com.miracle.smart_ecommerce_api_v1..repository..*.*(..))")
     public void repositoryLayerMethods() {}
 
     /**
      * Pointcut for all controller methods
      */
-    @Pointcut("execution(* com.miracle.smart_ecommerce.controller.*.*(..))")
+    @Pointcut("execution(* com.miracle.smart_ecommerce_api_v1.controller.*.*(..))")
     public void controllerLayerMethods() {}
 
     /**

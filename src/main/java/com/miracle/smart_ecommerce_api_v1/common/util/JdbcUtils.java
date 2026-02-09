@@ -5,7 +5,8 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -36,11 +37,11 @@ public final class JdbcUtils {
     }
 
     /**
-     * Get LocalDateTime from ResultSet, handling null values
+     * Get OffsetDateTime from ResultSet, handling null values
      */
-    public static LocalDateTime getLocalDateTime(ResultSet rs, String columnName) throws SQLException {
+    public static OffsetDateTime getLocalDateTime(ResultSet rs, String columnName) throws SQLException {
         Timestamp timestamp = rs.getTimestamp(columnName);
-        return timestamp != null ? timestamp.toLocalDateTime() : null;
+        return timestamp != null ? timestamp.toLocalDateTime().atZone(ZoneId.systemDefault()).toOffsetDateTime() : null;
     }
 
     /**

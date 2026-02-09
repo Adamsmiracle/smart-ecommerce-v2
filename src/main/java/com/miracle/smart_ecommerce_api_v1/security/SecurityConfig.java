@@ -33,7 +33,8 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-            .csrf(csrf -> csrf.disable())
+            .cors(cors -> cors.configure(http)) // Enable CORS
+            .csrf(csrf -> csrf.disable()) // Disable CSRF for REST API
             .headers(headers -> headers
                 .frameOptions(frame -> frame.disable())
             )
@@ -44,8 +45,14 @@ public class SecurityConfig {
                 .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
             )
             .authorizeHttpRequests(auth -> auth
-                // Allow ALL requests without authentication (development mode)
-                .anyRequest().permitAll()
+                // Public endpoints - no authentication required
+                .requestMatchers("/api/auth/**").permitAll()
+                .requestMatchers("/", "/health", "/actuator/**").permitAll()
+                .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/swagger-ui.html").permitAll()
+                .requestMatchers("/graphql", "/graphiql").permitAll()
+                .requestMatchers("/error").permitAll()
+                // All other requests require authentication
+                .anyRequest().permitAll() // Change to .authenticated() in production
             )
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 

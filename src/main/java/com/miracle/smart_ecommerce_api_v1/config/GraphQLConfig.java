@@ -27,9 +27,15 @@ public class GraphQLConfig {
                 .coercing(ExtendedScalars.GraphQLBigDecimal.getCoercing())
                 .build();
 
+        // Create OffsetDateTime scalar with the exact name used in schema
+        GraphQLScalarType offsetDateTimeScalar = GraphQLScalarType.newScalar()
+                .name("OffsetDateTime")
+                .coercing(ExtendedScalars.DateTime.getCoercing())
+                .build();
+
         return wiringBuilder -> wiringBuilder
                 .scalar(ExtendedScalars.UUID)
-                .scalar(ExtendedScalars.DateTime)
+                .scalar(offsetDateTimeScalar)
                 .scalar(bigDecimalScalar)
                 .build();
     }

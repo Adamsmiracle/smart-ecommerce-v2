@@ -4,7 +4,7 @@
 # Scalars - These must match the ExtendedScalars bean names
 scalar UUID
 scalar BigDecimal
-scalar DateTime
+scalar OffsetDateTime
 
 # ============================================================================
 # TYPES
@@ -18,8 +18,8 @@ type User {
     fullName: String
     phoneNumber: String
     isActive: Boolean!
-    createdAt: DateTime
-    updatedAt: DateTime
+    createdAt: OffsetDateTime
+    updatedAt: OffsetDateTime
 }
 
 type Product {
@@ -37,8 +37,8 @@ type Product {
     primaryImage: String
     averageRating: Float
     reviewCount: Int
-    createdAt: DateTime
-    updatedAt: DateTime
+    createdAt: OffsetDateTime
+    updatedAt: OffsetDateTime
 }
 
 type Category {
@@ -60,7 +60,7 @@ type CartItem {
     subtotal: BigDecimal!
     inStock: Boolean!
     availableStock: Int
-    addedAt: DateTime
+    addedAt: OffsetDateTime
 }
 
 type Cart {
@@ -68,7 +68,7 @@ type Cart {
     userId: UUID!
     totalItems: Int!
     totalValue: BigDecimal!
-    createdAt: DateTime
+    createdAt: OffsetDateTime
     items: [CartItem]
 }
 
@@ -93,8 +93,8 @@ type Order {
     total: BigDecimal!
     itemCount: Int
     customerNotes: String
-    createdAt: DateTime
-    cancelledAt: DateTime
+    createdAt: OffsetDateTime
+    cancelledAt: OffsetDateTime
     items: [OrderItem]
 }
 
@@ -106,8 +106,8 @@ type Review {
     rating: Int!
     title: String
     comment: String
-    createdAt: DateTime
-    updatedAt: DateTime
+    createdAt: OffsetDateTime
+    updatedAt: OffsetDateTime
 }
 
 type WishlistItem {
@@ -119,7 +119,7 @@ type WishlistItem {
     productPrice: BigDecimal
     productImage: String
     productInStock: Boolean
-    createdAt: DateTime
+    createdAt: OffsetDateTime
 }
 
 type Address {
@@ -133,15 +133,15 @@ type Address {
     isDefault: Boolean
     addressType: String
     fullAddress: String
-    createdAt: DateTime
+    createdAt: OffsetDateTime
 }
 
-type ReviewPage {
-    content: [Review]!
-    pageInfo: PageInfo!
-}
+# ============================================================================
+# PAGINATION TYPES (Updated to match PageResponse structure)
+# ============================================================================
 
-type PageInfo {
+type UserPage {
+    content: [User]!
     pageNumber: Int!
     pageSize: Int!
     totalElements: Int!
@@ -152,19 +152,40 @@ type PageInfo {
     hasPrevious: Boolean!
 }
 
-type UserPage {
-    content: [User]!
-    pageInfo: PageInfo!
-}
-
 type ProductPage {
     content: [Product]!
-    pageInfo: PageInfo!
+    pageNumber: Int!
+    pageSize: Int!
+    totalElements: Int!
+    totalPages: Int!
+    first: Boolean!
+    last: Boolean!
+    hasNext: Boolean!
+    hasPrevious: Boolean!
 }
 
 type OrderPage {
     content: [Order]!
-    pageInfo: PageInfo!
+    pageNumber: Int!
+    pageSize: Int!
+    totalElements: Int!
+    totalPages: Int!
+    first: Boolean!
+    last: Boolean!
+    hasNext: Boolean!
+    hasPrevious: Boolean!
+}
+
+type ReviewPage {
+    content: [Review]!
+    pageNumber: Int!
+    pageSize: Int!
+    totalElements: Int!
+    totalPages: Int!
+    first: Boolean!
+    last: Boolean!
+    hasNext: Boolean!
+    hasPrevious: Boolean!
 }
 
 # ============================================================================

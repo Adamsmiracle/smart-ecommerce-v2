@@ -32,6 +32,10 @@ spring:
       allowed-methods: "*"
     path: /graphql
 
+  # Cache configuration
+  cache:
+    type: simple  # Use simple in-memory cache (ConcurrentMapCacheManager)
+
 
 server:
   port: 9999

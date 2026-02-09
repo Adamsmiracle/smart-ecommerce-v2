@@ -1,0 +1,33 @@
+package com.miracle.smart_ecommerce_api_v1.domain.user.mapper;
+
+import com.miracle.smart_ecommerce_api_v1.common.util.JdbcUtils;
+import com.miracle.smart_ecommerce_api_v1.domain.user.entity.Address;
+import org.springframework.jdbc.core.RowMapper;
+import org.springframework.stereotype.Component;
+
+import java.sql.ResultSet;
+import java.sql.SQLException;
+
+/**
+ * RowMapper for Address domain model.
+ * Maps ResultSet rows to Address objects.
+ */
+@Component
+public class AddressMapper implements RowMapper<Address> {
+
+    @Override
+    public Address mapRow(ResultSet rs, int rowNum) throws SQLException {
+        return Address.builder()
+                .id(JdbcUtils.getUUID(rs, "id"))
+                .userId(JdbcUtils.getUUID(rs, "user_id"))
+                .addressLine(rs.getString("address_line"))
+                .city(rs.getString("city"))
+                .region(rs.getString("region"))
+                .country(rs.getString("country"))
+                .postalCode(rs.getString("postal_code"))
+                .isDefault(JdbcUtils.getBoolean(rs, "is_default"))
+                .addressType(rs.getString("address_type"))
+                .build();
+    }
+}
+

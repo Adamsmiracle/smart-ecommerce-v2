@@ -1,6 +1,7 @@
 package com.miracle.smart_ecommerce_api_v1.common.util;
 
 import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
@@ -49,15 +50,15 @@ public final class DateUtils {
     /**
      * Get current UTC time
      */
-    public static LocalDateTime nowUTC() {
-        return ZonedDateTime.now(ZoneId.of("UTC")).toLocalDateTime();
+    public static OffsetDateTime nowUTC() {
+        return ZonedDateTime.now(ZoneId.of("UTC")).toOffsetDateTime();
     }
 
     /**
      * Get current local time
      */
-    public static LocalDateTime now() {
-        return LocalDateTime.now();
+    public static OffsetDateTime now() {
+        return OffsetDateTime.now();
     }
 }
 

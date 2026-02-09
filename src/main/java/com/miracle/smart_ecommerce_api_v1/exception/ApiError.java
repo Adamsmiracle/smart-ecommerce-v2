@@ -1,6 +1,6 @@
 package com.miracle.smart_ecommerce_api_v1.exception;
 
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import com.miracle.smart_ecommerce_api_v1.exception.ErrorCode;
 
 public class ApiError {
@@ -11,7 +11,7 @@ public class ApiError {
     private String path;
     private String correlationId;
     private String clientIp;
-    private LocalDateTime timestamp = LocalDateTime.now();
+    private OffsetDateTime timestamp = OffsetDateTime.now();
 
     public ApiError() {}
 
@@ -87,11 +87,11 @@ public class ApiError {
         this.clientIp = clientIp;
     }
 
-    public LocalDateTime getTimestamp() {
+    public OffsetDateTime getTimestamp() {
         return timestamp;
     }
 
-    public void setTimestamp(LocalDateTime timestamp) {
+    public void setTimestamp(OffsetDateTime timestamp) {
         this.timestamp = timestamp;
     }
 

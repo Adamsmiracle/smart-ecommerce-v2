@@ -9,14 +9,20 @@ import org.slf4j.MDC;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolationException;
+import java.sql.SQLException;
 import java.util.stream.Collectors;
 
 // explicit import to avoid compile ordering issues
@@ -180,6 +186,232 @@ public class GlobalExceptionHandler {
                 .statusCode(HttpStatus.BAD_REQUEST.value())
                 .build();
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(body);
+    }
+
+    @ExceptionHandler(DuplicateResourceException.class)
+    public ResponseEntity<ApiResponse<ApiError>> handleDuplicateResource(DuplicateResourceException ex, HttpServletRequest req) {
+        String path = req.getRequestURI();
+        String cid = getCorrelationId();
+        String clientIp = getClientIp(req);
+        ApiError err = new ApiError(ErrorCode.DUPLICATE_RESOURCE, "Duplicate Resource", ex.getMessage(), path, cid, clientIp);
+        log.warn("Duplicate resource at {}: {} - cid={}", path, ex.getMessage(), cid);
+        ApiResponse<ApiError> body = ApiResponse.<ApiError>builder()
+                .status(false)
+                .message("Duplicate Resource")
+                .data(err)
+                .statusCode(HttpStatus.CONFLICT.value())
+                .build();
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(body);
+    }
+
+    @ExceptionHandler(InsufficientStockException.class)
+    public ResponseEntity<ApiResponse<ApiError>> handleInsufficientStock(InsufficientStockException ex, HttpServletRequest req) {
+        String path = req.getRequestURI();
+        String cid = getCorrelationId();
+        String clientIp = getClientIp(req);
+        ApiError err = new ApiError(ErrorCode.INSUFFICIENT_STOCK, "Insufficient Stock", ex.getMessage(), path, cid, clientIp);
+        log.warn("Insufficient stock at {}: {} - cid={}", path, ex.getMessage(), cid);
+        ApiResponse<ApiError> body = ApiResponse.<ApiError>builder()
+                .status(false)
+                .message("Insufficient Stock")
+                .data(err)
+                .statusCode(HttpStatus.BAD_REQUEST.value())
+                .build();
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(body);
+    }
+
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<ApiResponse<ApiError>> handleAccessDenied(AccessDeniedException ex, HttpServletRequest req) {
+        String path = req.getRequestURI();
+        String cid = getCorrelationId();
+        String clientIp = getClientIp(req);
+        ApiError err = new ApiError(ErrorCode.FORBIDDEN, "Access Denied", ex.getMessage(), path, cid, clientIp);
+        log.warn("Access denied at {}: {} - cid={}", path, ex.getMessage(), cid);
+        ApiResponse<ApiError> body = ApiResponse.<ApiError>builder()
+                .status(false)
+                .message("Access Denied")
+                .data(err)
+                .statusCode(HttpStatus.FORBIDDEN.value())
+                .build();
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(body);
+    }
+
+    @ExceptionHandler(AuthenticationException.class)
+    public ResponseEntity<ApiResponse<ApiError>> handleAuthentication(AuthenticationException ex, HttpServletRequest req) {
+        String path = req.getRequestURI();
+        String cid = getCorrelationId();
+        String clientIp = getClientIp(req);
+        ApiError err = new ApiError(ErrorCode.UNAUTHORIZED, "Authentication Failed", ex.getMessage(), path, cid, clientIp);
+        log.warn("Authentication failed at {}: {} - cid={}", path, ex.getMessage(), cid);
+        ApiResponse<ApiError> body = ApiResponse.<ApiError>builder()
+                .status(false)
+                .message("Authentication Failed")
+                .data(err)
+                .statusCode(HttpStatus.UNAUTHORIZED.value())
+                .build();
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(body);
+    }
+
+    @ExceptionHandler(BadCredentialsException.class)
+    public ResponseEntity<ApiResponse<ApiError>> handleBadCredentials(BadCredentialsException ex, HttpServletRequest req) {
+        String path = req.getRequestURI();
+        String cid = getCorrelationId();
+        String clientIp = getClientIp(req);
+        ApiError err = new ApiError(ErrorCode.UNAUTHORIZED, "Invalid Credentials", "Invalid username or password", path, cid, clientIp);
+        log.warn("Bad credentials at {}: {} - cid={}", path, ex.getMessage(), cid);
+        ApiResponse<ApiError> body = ApiResponse.<ApiError>builder()
+                .status(false)
+                .message("Invalid Credentials")
+                .data(err)
+                .statusCode(HttpStatus.UNAUTHORIZED.value())
+                .build();
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(body);
+    }
+
+    @ExceptionHandler(MissingServletRequestParameterException.class)
+    public ResponseEntity<ApiResponse<ApiError>> handleMissingParameter(MissingServletRequestParameterException ex, HttpServletRequest req) {
+        String path = req.getRequestURI();
+        String cid = getCorrelationId();
+        String clientIp = getClientIp(req);
+        String detail = "Required parameter '" + ex.getParameterName() + "' is missing";
+        ApiError err = new ApiError(ErrorCode.BAD_REQUEST, "Missing Parameter", detail, path, cid, clientIp);
+        log.warn("Missing parameter at {}: {} - cid={}", path, detail, cid);
+        ApiResponse<ApiError> body = ApiResponse.<ApiError>builder()
+                .status(false)
+                .message("Missing Parameter")
+                .data(err)
+                .statusCode(HttpStatus.BAD_REQUEST.value())
+                .build();
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(body);
+    }
+
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<ApiResponse<ApiError>> handleTypeMismatch(MethodArgumentTypeMismatchException ex, HttpServletRequest req) {
+        String path = req.getRequestURI();
+        String cid = getCorrelationId();
+        String clientIp = getClientIp(req);
+        String detail = "Invalid value '" + ex.getValue() + "' for parameter '" + ex.getName() + "'";
+        ApiError err = new ApiError(ErrorCode.BAD_REQUEST, "Type Mismatch", detail, path, cid, clientIp);
+        log.warn("Type mismatch at {}: {} - cid={}", path, detail, cid);
+        ApiResponse<ApiError> body = ApiResponse.<ApiError>builder()
+                .status(false)
+                .message("Type Mismatch")
+                .data(err)
+                .statusCode(HttpStatus.BAD_REQUEST.value())
+                .build();
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(body);
+    }
+
+    @ExceptionHandler(SQLException.class)
+    public ResponseEntity<ApiResponse<ApiError>> handleSQLException(SQLException ex, HttpServletRequest req) {
+        String path = req.getRequestURI();
+        String cid = getCorrelationId();
+        String clientIp = getClientIp(req);
+        ApiError err = new ApiError(ErrorCode.DATABASE_ERROR, "Database Error", "A database error occurred", path, cid, clientIp);
+        log.error("SQL exception at {} - cid={}", path, cid, ex);
+        ApiResponse<ApiError> body = ApiResponse.<ApiError>builder()
+                .status(false)
+                .message("Database Error")
+                .data(err)
+                .statusCode(HttpStatus.INTERNAL_SERVER_ERROR.value())
+                .build();
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(body);
+    }
+
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<ApiResponse<ApiError>> handleIllegalArgument(IllegalArgumentException ex, HttpServletRequest req) {
+        String path = req.getRequestURI();
+        String cid = getCorrelationId();
+        String clientIp = getClientIp(req);
+        ApiError err = new ApiError(ErrorCode.BAD_REQUEST, "Invalid Argument", ex.getMessage(), path, cid, clientIp);
+        log.warn("Illegal argument at {}: {} - cid={}", path, ex.getMessage(), cid);
+        ApiResponse<ApiError> body = ApiResponse.<ApiError>builder()
+                .status(false)
+                .message("Invalid Argument")
+                .data(err)
+                .statusCode(HttpStatus.BAD_REQUEST.value())
+                .build();
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(body);
+    }
+
+    @ExceptionHandler(IllegalStateException.class)
+    public ResponseEntity<ApiResponse<ApiError>> handleIllegalState(IllegalStateException ex, HttpServletRequest req) {
+        String path = req.getRequestURI();
+        String cid = getCorrelationId();
+        String clientIp = getClientIp(req);
+        ApiError err = new ApiError(ErrorCode.CONFLICT, "Invalid State", ex.getMessage(), path, cid, clientIp);
+        log.warn("Illegal state at {}: {} - cid={}", path, ex.getMessage(), cid);
+        ApiResponse<ApiError> body = ApiResponse.<ApiError>builder()
+                .status(false)
+                .message("Invalid State")
+                .data(err)
+                .statusCode(HttpStatus.CONFLICT.value())
+                .build();
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(body);
+    }
+
+    @ExceptionHandler(PaymentException.class)
+    public ResponseEntity<ApiResponse<ApiError>> handlePaymentException(PaymentException ex, HttpServletRequest req) {
+        String path = req.getRequestURI();
+        String cid = getCorrelationId();
+        String clientIp = getClientIp(req);
+        ApiError err = new ApiError(ErrorCode.PAYMENT_FAILED, "Payment Failed", ex.getMessage(), path, cid, clientIp);
+        log.error("Payment failed at {}: {} - cid={}", path, ex.getMessage(), cid);
+        ApiResponse<ApiError> body = ApiResponse.<ApiError>builder()
+                .status(false)
+                .message("Payment Failed")
+                .data(err)
+                .statusCode(HttpStatus.BAD_REQUEST.value())
+                .build();
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(body);
+    }
+
+    @ExceptionHandler(OrderProcessingException.class)
+    public ResponseEntity<ApiResponse<ApiError>> handleOrderProcessingException(OrderProcessingException ex, HttpServletRequest req) {
+        String path = req.getRequestURI();
+        String cid = getCorrelationId();
+        String clientIp = getClientIp(req);
+        ApiError err = new ApiError(ErrorCode.ORDER_PROCESSING_ERROR, "Order Processing Error", ex.getMessage(), path, cid, clientIp);
+        log.error("Order processing error at {}: {} - cid={}", path, ex.getMessage(), cid);
+        ApiResponse<ApiError> body = ApiResponse.<ApiError>builder()
+                .status(false)
+                .message("Order Processing Error")
+                .data(err)
+                .statusCode(HttpStatus.BAD_REQUEST.value())
+                .build();
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(body);
+    }
+
+    @ExceptionHandler(CartException.class)
+    public ResponseEntity<ApiResponse<ApiError>> handleCartException(CartException ex, HttpServletRequest req) {
+        String path = req.getRequestURI();
+        String cid = getCorrelationId();
+        String clientIp = getClientIp(req);
+        ApiError err = new ApiError(ErrorCode.CART_ERROR, "Cart Error", ex.getMessage(), path, cid, clientIp);
+        log.warn("Cart error at {}: {} - cid={}", path, ex.getMessage(), cid);
+        ApiResponse<ApiError> body = ApiResponse.<ApiError>builder()
+                .status(false)
+                .message("Cart Error")
+                .data(err)
+                .statusCode(HttpStatus.BAD_REQUEST.value())
+                .build();
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(body);
+    }
+
+    @ExceptionHandler(ServiceUnavailableException.class)
+    public ResponseEntity<ApiResponse<ApiError>> handleServiceUnavailable(ServiceUnavailableException ex, HttpServletRequest req) {
+        String path = req.getRequestURI();
+        String cid = getCorrelationId();
+        String clientIp = getClientIp(req);
+        ApiError err = new ApiError(ErrorCode.SERVICE_UNAVAILABLE, "Service Unavailable", ex.getMessage(), path, cid, clientIp);
+        log.error("Service unavailable at {}: {} - cid={}", path, ex.getMessage(), cid);
+        ApiResponse<ApiError> body = ApiResponse.<ApiError>builder()
+                .status(false)
+                .message("Service Unavailable")
+                .data(err)
+                .statusCode(HttpStatus.SERVICE_UNAVAILABLE.value())
+                .build();
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(body);
     }
 
     @ExceptionHandler(Exception.class)
