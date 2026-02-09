@@ -13,6 +13,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -153,6 +154,8 @@ public class ReviewRepositoryImpl implements ReviewRepository {
     private static class ProductReviewRowMapper implements RowMapper<ProductReview> {
         @Override
         public ProductReview mapRow(ResultSet rs, int rowNum) throws SQLException {
+            Timestamp createdTs = rs.getTimestamp("created_at");
+            Timestamp updatedTs = rs.getTimestamp("updated_at");
             return ProductReview.builder()
                     .id(rs.getObject("id", UUID.class))
                     .productId(rs.getObject("product_id", UUID.class))
@@ -160,10 +163,9 @@ public class ReviewRepositoryImpl implements ReviewRepository {
                     .rating(rs.getInt("rating"))
                     .title(rs.getString("title"))
                     .comment(rs.getString("comment"))
-                    .createdAt(rs.getTimestamp("created_at") != null ? OffsetDateTime.from(rs.getTimestamp("created_at").toLocalDateTime()) : null)
-                    .updatedAt(rs.getTimestamp("updated_at") != null ? OffsetDateTime.from(rs.getTimestamp("updated_at").toLocalDateTime()) : null)
+                    .createdAt(createdTs != null ? createdTs.toLocalDateTime().atZone(ZoneId.systemDefault()).toOffsetDateTime() : null)
+                    .updatedAt(updatedTs != null ? updatedTs.toLocalDateTime().atZone(ZoneId.systemDefault()).toOffsetDateTime() : null)
                     .build();
         }
     }
 }
-

@@ -15,6 +15,7 @@ import com.miracle.smart_ecommerce_api_v1.domain.user.entity.Address;
 import com.miracle.smart_ecommerce_api_v1.domain.user.entity.User;
 import com.miracle.smart_ecommerce_api_v1.domain.order.dto.CreateOrderRequest;
 import com.miracle.smart_ecommerce_api_v1.domain.order.dto.OrderResponse;
+import com.miracle.smart_ecommerce_api_v1.domain.order.dto.UpdateOrderRequest;
 import com.miracle.smart_ecommerce_api_v1.domain.user.repository.AddressRepository;
 import com.miracle.smart_ecommerce_api_v1.domain.user.repository.UserRepository;
 import com.miracle.smart_ecommerce_api_v1.exception.ResourceNotFoundException;
@@ -517,5 +518,153 @@ public class OrderServiceImpl implements OrderService {
             cache.clear();
         }
     }
-}
 
+    @Override
+    @Transactional
+    public OrderResponse updateOrder(UUID id, UpdateOrderRequest request) {
+        log.info("Updating order {} with request: {}", id, request);
+
+        CustomerOrder order = orderRepository.findById(id)
+                .orElseThrow(() -> ResourceNotFoundException.forResource("Order", id));
+
+        boolean changed = false;
+        String orderNumber = order.getOrderNumber();
+
+        if (request.getPaymentMethodId() != null && !request.getPaymentMethodId().equals(order.getPaymentMethodId())) {
+            order.setPaymentMethodId(request.getPaymentMethodId());
+            changed = true;
+        }
+        if (request.getShippingAddressId() != null && !request.getShippingAddressId().equals(order.getShippingAddressId())) {
+            // verify address belongs to user? optional
+            order.setShippingAddressId(request.getShippingAddressId());
+            changed = true;
+        }
+        if (request.getShippingMethodId() != null && !request.getShippingMethodId().equals(order.getShippingMethodId())) {
+            order.setShippingMethodId(request.getShippingMethodId());
+            changed = true;
+        }
+        if (request.getCustomerNotes() != null && !request.getCustomerNotes().equals(order.getCustomerNotes())) {
+            order.setCustomerNotes(request.getCustomerNotes());
+            changed = true;
+        }
+
+        // Process item updates if provided
+        if (request.getItems() != null) {
+            // Load existing items
+            List<OrderItem> existingItems = orderItemRepository.findByOrderId(id);
+
+            // Map existing items by id for quick lookup
+            java.util.Map<java.util.UUID, OrderItem> existingById = existingItems.stream()
+                    .filter(it -> it.getId() != null)
+                    .collect(Collectors.toMap(OrderItem::getId, it -> it));
+
+            // We'll build new list of items to persist/keep
+            List<OrderItem> resultingItems = new ArrayList<>();
+
+            // Track stock changes: productId -> stockDelta (negative means reduce stock)
+            java.util.Map<UUID, Integer> stockDeltas = new java.util.HashMap<>();
+
+            for (UpdateOrderRequest.OrderItemUpdateRequest itemReq : request.getItems()) {
+                if (itemReq.getId() != null && existingById.containsKey(itemReq.getId())) {
+                    // Update existing item
+                    OrderItem existing = existingById.get(itemReq.getId());
+                    if (itemReq.getQuantity() == null || itemReq.getQuantity() <= 0) {
+                        // delete this item: stock should be restored by +existing.quantity
+                        stockDeltas.merge(existing.getProductId(), existing.getQuantity(), Integer::sum);
+                        // don't add to resultingItems
+                        changed = true;
+                        continue;
+                    }
+
+                    if (!existing.getQuantity().equals(itemReq.getQuantity())) {
+                        int qtyDiff = itemReq.getQuantity() - existing.getQuantity();
+                        // reduce stock by qtyDiff (can be negative to restore stock)
+                        stockDeltas.merge(existing.getProductId(), -qtyDiff, Integer::sum);
+                        existing.setQuantity(itemReq.getQuantity());
+                        existing.calculateTotalPrice();
+                        changed = true;
+                    }
+                    resultingItems.add(existing);
+                } else {
+                    // New item to add
+                    if (itemReq.getProductId() == null || itemReq.getQuantity() == null || itemReq.getQuantity() <= 0) {
+                        // ignore invalid
+                        continue;
+                    }
+                    Product product = productRepository.findById(itemReq.getProductId())
+                            .orElseThrow(() -> ResourceNotFoundException.forResource("Product", itemReq.getProductId()));
+
+                    // validate stock
+                    if (product.getStockQuantity() < itemReq.getQuantity()) {
+                        throw new IllegalArgumentException("Insufficient stock for product: " + product.getName());
+                    }
+
+                    OrderItem newItem = OrderItem.fromProduct(product, itemReq.getQuantity());
+                    newItem.setOrderId(id);
+                    // will be saved below
+                    resultingItems.add(newItem);
+                    // reduce stock by quantity
+                    stockDeltas.merge(product.getId(), -itemReq.getQuantity(), Integer::sum);
+                    changed = true;
+                }
+            }
+
+            // Apply stock deltas
+            for (java.util.Map.Entry<UUID, Integer> e : stockDeltas.entrySet()) {
+                UUID pid = e.getKey();
+                int delta = e.getValue();
+                if (delta == 0) continue;
+                productRepository.updateStock(pid, delta);
+            }
+
+            // Persist item changes: delete all existing and re-insert resultingItems for simplicity
+            orderItemRepository.deleteByOrderId(id);
+            for (OrderItem item : resultingItems) {
+                item.setOrderId(id);
+                OrderItem saved = orderItemRepository.save(item);
+                // update id if needed
+                item.setId(saved.getId());
+            }
+
+            // attach items to order
+            order.setOrderItems(resultingItems);
+
+            // Recalculate subtotal/total
+            BigDecimal newSubtotal = resultingItems.stream()
+                    .map(OrderItem::getTotalPrice)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+            order.setSubtotal(newSubtotal);
+            order.setTotal(newSubtotal.add(order.getShippingCost() == null ? BigDecimal.ZERO : order.getShippingCost()));
+        }
+
+        if (!changed) {
+            log.debug("No changes detected for order {}", id);
+            return mapToResponseWithDetails(order);
+        }
+
+        // Persist order changes
+        CustomerOrder updated = orderRepository.update(order);
+
+        // Refresh and prepare response
+        updated = orderRepository.findById(id)
+                .orElseThrow(() -> ResourceNotFoundException.forResource("Order", id));
+
+        OrderResponse response = mapToResponseWithDetails(updated);
+
+        // Update caches
+        Cache byIdCache = cacheManager.getCache(ORDERS_CACHE);
+        if (byIdCache != null) {
+            byIdCache.put("id:" + id, response);
+        }
+        Cache byNumberCache = cacheManager.getCache(ORDERS_CACHE);
+        if (byNumberCache != null && orderNumber != null) {
+            byNumberCache.put("number:" + orderNumber, response);
+        }
+
+        // Clear list cache
+        evictCache(ORDERS_CACHE);
+
+        log.info("Order {} updated successfully", id);
+        return response;
+    }
+}

@@ -37,7 +37,7 @@ public class CartController {
         return ResponseEntity.ok(ApiResponse.success(carts));
     }
 
-    @GetMapping("/{userId}")
+    @GetMapping("/user/{userId}")
     @Operation(summary = "Get cart", description = "Retrieves user's shopping cart")
     public ResponseEntity<ApiResponse<CartResponse>> getCart(
             @Parameter(description = "User ID") @PathVariable UUID userId) {
@@ -45,7 +45,7 @@ public class CartController {
         return ResponseEntity.ok(ApiResponse.success(cart));
     }
 
-    @PostMapping("/{userId}/items")
+    @PostMapping("/user/{userId}/items")
     @Operation(summary = "Add item to cart", description = "Adds a product to the shopping cart")
     public ResponseEntity<ApiResponse<CartResponse>> addItemToCart(
             @Parameter(description = "User ID") @PathVariable UUID userId,
@@ -54,7 +54,7 @@ public class CartController {
         return ResponseEntity.ok(ApiResponse.success(cart, "Item added to cart"));
     }
 
-    @PutMapping("/{userId}/items/{itemId}")
+    @PutMapping("/user/{userId}/items/{itemId}")
     @Operation(summary = "Update item quantity", description = "Updates the quantity of a cart item")
     public ResponseEntity<ApiResponse<CartResponse>> updateItemQuantity(
             @Parameter(description = "User ID") @PathVariable UUID userId,
@@ -64,7 +64,7 @@ public class CartController {
         return ResponseEntity.ok(ApiResponse.success(cart, "Cart item updated"));
     }
 
-    @DeleteMapping("/{userId}/items/{itemId}")
+    @DeleteMapping("/user/{userId}/items/{itemId}")
     @Operation(summary = "Remove item from cart", description = "Removes a product from the shopping cart")
     public ResponseEntity<ApiResponse<CartResponse>> removeItemFromCart(
             @Parameter(description = "User ID") @PathVariable UUID userId,
@@ -73,7 +73,7 @@ public class CartController {
         return ResponseEntity.ok(ApiResponse.success(cart, "Item removed from cart"));
     }
 
-    @DeleteMapping("/{userId}")
+    @DeleteMapping("/user/{userId}")
     @Operation(summary = "Clear cart", description = "Removes all items from the shopping cart")
     public ResponseEntity<ApiResponse<Void>> clearCart(
             @Parameter(description = "User ID") @PathVariable UUID userId) {
@@ -81,12 +81,19 @@ public class CartController {
         return ResponseEntity.ok(ApiResponse.success("Cart cleared successfully"));
     }
 
-    @GetMapping("/{userId}/count")
+    @GetMapping("/user/{userId}/count")
     @Operation(summary = "Get cart item count", description = "Returns the total number of items in cart")
     public ResponseEntity<ApiResponse<Integer>> getCartItemCount(
             @Parameter(description = "User ID") @PathVariable UUID userId) {
         int count = cartService.getCartItemCount(userId);
         return ResponseEntity.ok(ApiResponse.success(count));
     }
-}
 
+    @GetMapping("/count")
+    @Operation(summary = "Get cart item count (query)", description = "Returns the total number of items in cart — accepts userId as query parameter")
+    public ResponseEntity<ApiResponse<Integer>> getCartItemCountByQuery(
+            @Parameter(description = "User ID (query param)") @RequestParam UUID userId) {
+        int count = cartService.getCartItemCount(userId);
+        return ResponseEntity.ok(ApiResponse.success(count));
+    }
+}

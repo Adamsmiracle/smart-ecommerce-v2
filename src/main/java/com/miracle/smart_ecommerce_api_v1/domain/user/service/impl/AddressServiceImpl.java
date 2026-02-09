@@ -187,7 +187,8 @@ public class AddressServiceImpl implements AddressService {
                 .postalCode(address.getPostalCode())
                 .isDefault(address.getIsDefault())
                 .addressType(address.getAddressType())
-                .createdAt(OffsetDateTime.from(address.getCreatedAt()))
+                // createdAt is already an OffsetDateTime in BaseModel; guard against null
+                .createdAt(address.getCreatedAt())
                 .build();
     }
 }

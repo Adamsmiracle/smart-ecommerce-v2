@@ -74,13 +74,18 @@ public class WishlistServiceImpl implements WishlistService {
 
     @Override
     @Transactional(readOnly = true)
-    @Cacheable(value = WISHLIST_CACHE, key = "#userId")
+    // @Cacheable(value = WISHLIST_CACHE, key = "#userId") // Temporarily disabled for debugging
     public List<WishlistItemResponse> getWishlistByUserId(UUID userId) {
-        log.debug("Getting wishlist for user: {}", userId);
+        log.info("Getting wishlist for user: {}", userId);
         List<WishlistItem> items = wishlistRepository.findByUserId(userId);
-        return items.stream()
+        log.info("Found {} wishlist items for user: {}", items.size(), userId);
+        
+        List<WishlistItemResponse> responses = items.stream()
                 .map(this::loadProductAndMapToResponse)
                 .collect(Collectors.toList());
+        
+        log.info("Returning {} wishlist item responses for user: {}", responses.size(), userId);
+        return responses;
     }
 
     @Override
@@ -173,8 +178,15 @@ public class WishlistServiceImpl implements WishlistService {
     // ========================================================================
 
     private WishlistItemResponse loadProductAndMapToResponse(WishlistItem item) {
+        log.debug("Loading product for wishlist item: {}, product ID: {}", item.getId(), item.getProductId());
         productRepository.findById(item.getProductId())
-                .ifPresent(item::setProduct);
+                .ifPresentOrElse(
+                    product -> {
+                        log.debug("Found product {} for wishlist item {}", product.getName(), item.getId());
+                        item.setProduct(product);
+                    },
+                    () -> log.warn("Product not found for wishlist item: {}, product ID: {}", item.getId(), item.getProductId())
+                );
         return mapToResponse(item);
     }
 

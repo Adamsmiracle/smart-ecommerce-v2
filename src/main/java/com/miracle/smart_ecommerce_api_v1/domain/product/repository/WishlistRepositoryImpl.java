@@ -1,7 +1,5 @@
 package com.miracle.smart_ecommerce_api_v1.domain.product.repository;
 
-import java.time.OffsetDateTime;
-
 import com.miracle.smart_ecommerce_api_v1.domain.product.entity.WishlistItem;
 import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -12,7 +10,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -64,7 +62,10 @@ public class WishlistRepositoryImpl implements WishlistRepository {
     @Transactional(readOnly = true)
     public List<WishlistItem> findByUserId(UUID userId) {
         String sql = "SELECT * FROM wishlist_item WHERE user_id = ? ORDER BY created_at DESC";
-        return jdbcTemplate.query(sql, wishlistItemRowMapper, userId);
+        System.out.println("Executing SQL: " + sql + " with userId: " + userId);
+        List<WishlistItem> items = jdbcTemplate.query(sql, wishlistItemRowMapper, userId);
+        System.out.println("Found " + items.size() + " items for userId: " + userId);
+        return items;
     }
 
     @Override
@@ -137,14 +138,14 @@ public class WishlistRepositoryImpl implements WishlistRepository {
     private static class WishlistItemRowMapper implements RowMapper<WishlistItem> {
         @Override
         public WishlistItem mapRow(ResultSet rs, int rowNum) throws SQLException {
-            return WishlistItem.builder()
+            WishlistItem item = WishlistItem.builder()
                     .id(rs.getObject("id", UUID.class))
                     .userId(rs.getObject("user_id", UUID.class))
                     .productId(rs.getObject("product_id", UUID.class))
-                    .createdAt(rs.getTimestamp("created_at") != null ?
-                            OffsetDateTime.from(rs.getTimestamp("created_at").toLocalDateTime()) : null)
+                    .createdAt(rs.getObject("created_at", OffsetDateTime.class))
                     .build();
+            System.out.println("Mapped wishlist item: " + item.getId() + " for user: " + item.getUserId());
+            return item;
         }
     }
 }
-

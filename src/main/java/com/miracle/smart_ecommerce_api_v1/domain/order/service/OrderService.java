@@ -3,6 +3,7 @@ package com.miracle.smart_ecommerce_api_v1.domain.order.service;
 import com.miracle.smart_ecommerce_api_v1.common.response.PageResponse;
 import com.miracle.smart_ecommerce_api_v1.domain.order.dto.CreateOrderRequest;
 import com.miracle.smart_ecommerce_api_v1.domain.order.dto.OrderResponse;
+import com.miracle.smart_ecommerce_api_v1.domain.order.dto.UpdateOrderRequest;
 
 import java.util.UUID;
 
@@ -57,6 +58,11 @@ public interface OrderService {
     OrderResponse cancelOrder(UUID id);
 
     /**
+     * Update order top-level editable fields
+     */
+    OrderResponse updateOrder(UUID id, UpdateOrderRequest request);
+
+    /**
      * Delete order
      */
     void deleteOrder(UUID id);
@@ -71,4 +77,3 @@ public interface OrderService {
      */
     long countOrdersByStatus(String status);
 }
-

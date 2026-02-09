@@ -24,3 +24,4 @@ public class AddToWishlistRequest {
     private UUID productId;
 }
 
+

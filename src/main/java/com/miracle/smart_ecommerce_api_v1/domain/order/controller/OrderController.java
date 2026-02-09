@@ -4,6 +4,7 @@ import com.miracle.smart_ecommerce_api_v1.common.response.ApiResponse;
 import com.miracle.smart_ecommerce_api_v1.common.response.PageResponse;
 import com.miracle.smart_ecommerce_api_v1.domain.order.dto.CreateOrderRequest;
 import com.miracle.smart_ecommerce_api_v1.domain.order.dto.OrderResponse;
+import com.miracle.smart_ecommerce_api_v1.domain.order.dto.UpdateOrderRequest;
 import com.miracle.smart_ecommerce_api_v1.domain.order.service.OrderService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -145,6 +146,15 @@ public class OrderController {
             @Parameter(description = "Order status") @PathVariable String status) {
         long count = orderService.countOrdersByStatus(status);
         return ResponseEntity.ok(ApiResponse.success(count));
+    }
+
+    @PutMapping("/{id}")
+    @Operation(summary = "Update order", description = "Update editable top-level order fields")
+    public ResponseEntity<ApiResponse<OrderResponse>> updateOrder(
+            @Parameter(description = "Order ID") @PathVariable UUID id,
+            @Valid @RequestBody UpdateOrderRequest request) {
+        OrderResponse order = orderService.updateOrder(id, request);
+        return ResponseEntity.ok(ApiResponse.success(order, "Order updated successfully"));
     }
 }
 
