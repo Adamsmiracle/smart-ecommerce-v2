@@ -253,6 +253,35 @@ public class UserServiceImpl implements UserService {
         return userRepository.count();
     }
 
+    @Override
+    @Transactional
+    public void updateUserRoles(UUID id, List<String> roles) {
+        log.info("Updating roles for user {} to {}", id, roles);
+
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> ResourceNotFoundException.forResource("User", id));
+
+        // Normalize roles (ensure ROLE_ prefix)
+        List<String> normalized = roles.stream()
+                .filter(r -> r != null && !r.isBlank())
+                .map(String::trim)
+                .map(r -> r.startsWith("ROLE_") ? r : "ROLE_" + r)
+                .distinct()
+                .collect(Collectors.toList());
+
+        user.setRoles(new java.util.HashSet<>(normalized));
+        userRepository.update(user);
+
+        // Evict cache entries for this user
+        Cache cache = cacheManager.getCache(USERS_CACHE);
+        if (cache != null) {
+            cache.evict("id:" + id);
+            cache.evict("email:" + user.getEmailAddress());
+        }
+
+        log.info("Roles updated for user {}", id);
+    }
+
     // ========================================================================
     // Helper Methods
     // ========================================================================
@@ -268,6 +297,7 @@ public class UserServiceImpl implements UserService {
                 .isActive(user.getIsActive())
                 .createdAt(user.getCreatedAt())
                 .updatedAt(user.getUpdatedAt())
+                .roles(user.getRoles() == null ? java.util.List.of("ROLE_USER") : user.getRoles().stream().collect(Collectors.toList()))
                 .build();
     }
 

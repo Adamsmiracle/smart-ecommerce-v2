@@ -3,6 +3,7 @@ package com.miracle.smart_ecommerce_api_v1.domain.user.controller;
 import com.miracle.smart_ecommerce_api_v1.common.response.ApiResponse;
 import com.miracle.smart_ecommerce_api_v1.common.response.PageResponse;
 import com.miracle.smart_ecommerce_api_v1.domain.user.dto.request.CreateUserRequest;
+import com.miracle.smart_ecommerce_api_v1.domain.user.dto.request.UpdateRolesRequest;
 import com.miracle.smart_ecommerce_api_v1.domain.user.dto.response.UserResponse;
 import com.miracle.smart_ecommerce_api_v1.domain.user.service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -12,6 +13,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
@@ -113,6 +115,16 @@ public class UserController {
             @Parameter(description = "User ID") @PathVariable UUID id) {
         userService.deactivateUser(id);
         return ResponseEntity.ok(ApiResponse.success("User deactivated successfully"));
+    }
+
+    @PreAuthorize("hasRole('ADMIN')")
+    @PatchMapping("/{id}/roles")
+    @Operation(summary = "Update user roles", description = "Admin: update roles for a user")
+    public ResponseEntity<ApiResponse<Void>> updateRoles(
+            @Parameter(description = "User ID") @PathVariable UUID id,
+            @Valid @RequestBody UpdateRolesRequest request) {
+        userService.updateUserRoles(id, request.getRoles());
+        return ResponseEntity.ok(ApiResponse.success("User roles updated successfully"));
     }
 }
 

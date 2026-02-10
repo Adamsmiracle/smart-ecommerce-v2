@@ -5,6 +5,9 @@ import jakarta.validation.constraints.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
 
+import java.util.HashSet;
+import java.util.Set;
+
 /**
  * User domain model (POJO) - represents app_user table.
  */
@@ -34,6 +37,14 @@ public class User extends BaseModel {
 
     private Boolean isActive;
 
+    // Roles stored as a set of strings, e.g. ROLE_USER, ROLE_ADMIN
+    @Builder.Default
+    private Set<String> roles = new HashSet<>();
+
+    public boolean isAdmin() {
+        return roles != null && roles.contains("ROLE_ADMIN");
+    }
+
     /**
      * Get user's full name
      */
@@ -44,4 +55,3 @@ public class User extends BaseModel {
         return ((firstName != null ? firstName : "") + " " + (lastName != null ? lastName : "")).trim();
     }
 }
-

@@ -16,7 +16,10 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 /**
  * Implementation of AuthService.
@@ -54,8 +57,11 @@ public class AuthServiceImpl implements AuthService {
         User savedUser = userRepository.save(user);
         log.info("User registered successfully with ID: {}", savedUser.getId());
 
-        // Generate tokens
-        String accessToken = jwtTokenProvider.generateToken(savedUser.getId(), savedUser.getEmailAddress());
+        // Generate tokens (include roles)
+        List<String> roles = new ArrayList<>(savedUser.getRoles() == null || savedUser.getRoles().isEmpty() ?
+                java.util.Set.of("ROLE_USER") : savedUser.getRoles());
+
+        String accessToken = jwtTokenProvider.generateToken(savedUser.getId(), savedUser.getEmailAddress(), roles);
         String refreshToken = jwtTokenProvider.generateRefreshToken(savedUser.getId());
 
         return AuthResponse.of(
@@ -65,7 +71,8 @@ public class AuthServiceImpl implements AuthService {
                 savedUser.getId(),
                 savedUser.getEmailAddress(),
                 savedUser.getFirstName(),
-                savedUser.getLastName()
+                savedUser.getLastName(),
+                roles.stream().collect(Collectors.toList())
         );
     }
 
@@ -91,8 +98,11 @@ public class AuthServiceImpl implements AuthService {
 
         log.info("User logged in successfully: {}", user.getId());
 
-        // Generate tokens
-        String accessToken = jwtTokenProvider.generateToken(user.getId(), user.getEmailAddress());
+        // Generate tokens (include roles)
+        List<String> roles = new ArrayList<>(user.getRoles() == null || user.getRoles().isEmpty() ?
+                java.util.Set.of("ROLE_USER") : user.getRoles());
+
+        String accessToken = jwtTokenProvider.generateToken(user.getId(), user.getEmailAddress(), roles);
         String refreshToken = jwtTokenProvider.generateRefreshToken(user.getId());
 
         return AuthResponse.of(
@@ -102,7 +112,8 @@ public class AuthServiceImpl implements AuthService {
                 user.getId(),
                 user.getEmailAddress(),
                 user.getFirstName(),
-                user.getLastName()
+                user.getLastName(),
+                roles.stream().collect(Collectors.toList())
         );
     }
 
@@ -135,8 +146,11 @@ public class AuthServiceImpl implements AuthService {
 
         log.info("Token refreshed successfully for user: {}", userId);
 
-        // Generate new tokens
-        String newAccessToken = jwtTokenProvider.generateToken(user.getId(), user.getEmailAddress());
+        // Generate new tokens (include roles)
+        List<String> roles = new ArrayList<>(user.getRoles() == null || user.getRoles().isEmpty() ?
+                java.util.Set.of("ROLE_USER") : user.getRoles());
+
+        String newAccessToken = jwtTokenProvider.generateToken(user.getId(), user.getEmailAddress(), roles);
         String newRefreshToken = jwtTokenProvider.generateRefreshToken(user.getId());
 
         return AuthResponse.of(
@@ -146,7 +160,8 @@ public class AuthServiceImpl implements AuthService {
                 user.getId(),
                 user.getEmailAddress(),
                 user.getFirstName(),
-                user.getLastName()
+                user.getLastName(),
+                roles.stream().collect(Collectors.toList())
         );
     }
 
@@ -164,11 +179,15 @@ public class AuthServiceImpl implements AuthService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> ResourceNotFoundException.forResource("User", userId));
 
+        List<String> roles = new ArrayList<>(user.getRoles() == null || user.getRoles().isEmpty()
+                ? java.util.Set.of("ROLE_USER") : user.getRoles());
+
         return AuthResponse.builder()
                 .userId(user.getId())
                 .email(user.getEmailAddress())
                 .firstName(user.getFirstName())
                 .lastName(user.getLastName())
+                .roles(roles.stream().collect(Collectors.toList()))
                 .build();
     }
 }

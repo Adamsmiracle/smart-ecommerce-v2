@@ -4,6 +4,7 @@ import com.miracle.smart_ecommerce_api_v1.common.response.PageResponse;
 import com.miracle.smart_ecommerce_api_v1.domain.user.dto.request.CreateUserRequest;
 import com.miracle.smart_ecommerce_api_v1.domain.user.dto.response.UserResponse;
 
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -60,5 +61,9 @@ public interface UserService {
      * Count total users
      */
     long countUsers();
-}
 
+    /**
+     * Update roles for a user (admin only)
+     */
+    void updateUserRoles(UUID id, List<String> roles);
+}

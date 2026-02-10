@@ -5,6 +5,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -24,9 +25,10 @@ public class AuthResponse {
     private String email;
     private String firstName;
     private String lastName;
+    private List<String> roles;
 
     public static AuthResponse of(String accessToken, String refreshToken, Long expiresIn,
-                                   UUID userId, String email, String firstName, String lastName) {
+                                   UUID userId, String email, String firstName, String lastName, List<String> roles) {
         return AuthResponse.builder()
                 .accessToken(accessToken)
                 .refreshToken(refreshToken)
@@ -36,7 +38,7 @@ public class AuthResponse {
                 .email(email)
                 .firstName(firstName)
                 .lastName(lastName)
+                .roles(roles)
                 .build();
     }
 }
-

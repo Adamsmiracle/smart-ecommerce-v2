@@ -55,7 +55,7 @@ public class CartServiceImpl implements CartService {
     }
 
     @Override
-    @Transactional(readOnly = true)
+    @Transactional
     @Cacheable(value = CART_CACHE, key = "#userId")
     public CartResponse getCartByUserId(UUID userId) {
         log.debug("Getting cart for user: {}", userId);

@@ -2,6 +2,7 @@ package com.miracle.smart_ecommerce_api_v1.domain.user.repository;
 
 import java.time.OffsetDateTime;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.miracle.smart_ecommerce_api_v1.common.util.JdbcUtils;
 import com.miracle.smart_ecommerce_api_v1.domain.user.entity.User;
 import com.miracle.smart_ecommerce_api_v1.exception.ResourceNotFoundException;
@@ -28,6 +29,7 @@ public class UserRepositoryImpl implements UserRepository {
     private final JdbcTemplate jdbcTemplate;
     private final NamedParameterJdbcTemplate namedJdbcTemplate;
     private final UserMapper userRowMapper;
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     public UserRepositoryImpl(JdbcTemplate jdbcTemplate,
                               NamedParameterJdbcTemplate namedJdbcTemplate,
@@ -41,22 +43,30 @@ public class UserRepositoryImpl implements UserRepository {
     @Transactional
     public User save(User user) {
         String sql = """
-            INSERT INTO app_user (email_address, first_name, last_name, phone_number, password_hash, is_active, created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-            RETURNING id, email_address, first_name, last_name, phone_number, password_hash, is_active, created_at, updated_at
+            INSERT INTO app_user (email_address, first_name, last_name, phone_number, password_hash, is_active, created_at, updated_at, roles)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?::jsonb)
+            RETURNING id, email_address, first_name, last_name, phone_number, password_hash, is_active, created_at, updated_at, roles
             """;
 
         OffsetDateTime now = OffsetDateTime.now();
-        return jdbcTemplate.queryForObject(sql, userRowMapper,
-                user.getEmailAddress(),
-                user.getFirstName(),
-                user.getLastName(),
-                user.getPhoneNumber(),
-                user.getPasswordHash(),
-                user.getIsActive() != null ? user.getIsActive() : true,
-                Timestamp.valueOf(now.toLocalDateTime()),
-                Timestamp.valueOf(now.toLocalDateTime())
-        );
+        try {
+            String rolesJson = objectMapper.writeValueAsString(user.getRoles() == null || user.getRoles().isEmpty()
+                    ? java.util.Set.of("ROLE_USER") : user.getRoles());
+
+            return jdbcTemplate.queryForObject(sql, userRowMapper,
+                    user.getEmailAddress(),
+                    user.getFirstName(),
+                    user.getLastName(),
+                    user.getPhoneNumber(),
+                    user.getPasswordHash(),
+                    user.getIsActive() != null ? user.getIsActive() : true,
+                    Timestamp.valueOf(now.toLocalDateTime()),
+                    Timestamp.valueOf(now.toLocalDateTime()),
+                    rolesJson
+            );
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to serialize roles", e);
+        }
     }
 
     @Override
@@ -65,12 +75,15 @@ public class UserRepositoryImpl implements UserRepository {
         String sql = """
             UPDATE app_user 
             SET email_address = ?, first_name = ?, last_name = ?, phone_number = ?, 
-                password_hash = ?, is_active = ?, updated_at = ?
+                password_hash = ?, is_active = ?, updated_at = ?, roles = ?::jsonb
             WHERE id = ?
-            RETURNING id, email_address, first_name, last_name, phone_number, password_hash, is_active, created_at, updated_at
+            RETURNING id, email_address, first_name, last_name, phone_number, password_hash, is_active, created_at, updated_at, roles
             """;
 
         try {
+            String rolesJson = objectMapper.writeValueAsString(user.getRoles() == null || user.getRoles().isEmpty()
+                    ? java.util.Set.of("ROLE_USER") : user.getRoles());
+
             return jdbcTemplate.queryForObject(sql, userRowMapper,
                     user.getEmailAddress(),
                     user.getFirstName(),
@@ -79,10 +92,13 @@ public class UserRepositoryImpl implements UserRepository {
                     user.getPasswordHash(),
                     user.getIsActive(),
                     Timestamp.valueOf(OffsetDateTime.now().toLocalDateTime()),
+                    rolesJson,
                     user.getId()
             );
         } catch (EmptyResultDataAccessException e) {
             throw ResourceNotFoundException.forResource("User", user.getId());
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to serialize roles", e);
         }
     }
 
@@ -218,3 +234,4 @@ public class UserRepositoryImpl implements UserRepository {
         }
     }
 }
+
