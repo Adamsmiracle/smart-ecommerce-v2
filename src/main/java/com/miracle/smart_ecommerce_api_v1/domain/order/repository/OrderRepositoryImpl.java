@@ -12,7 +12,6 @@ import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.sql.Timestamp;
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -35,25 +34,24 @@ public class OrderRepositoryImpl implements OrderRepository {
     @Transactional
     public CustomerOrder save(CustomerOrder order) {
         String sql = """
-            INSERT INTO customer_order (user_id, order_number, status, payment_method_id, payment_status, 
-                shipping_address_id, shipping_method_id, subtotal, shipping_cost, total, customer_notes, created_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO customer_order (user_id, order_number, status, payment_method_id, shipping_method_id, payment_status,
+                subtotal, total_amount, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             RETURNING *
             """;
 
+        OffsetDateTime now = OffsetDateTime.now();
         return jdbcTemplate.queryForObject(sql, orderMapper,
                 order.getUserId(),
                 order.getOrderNumber(),
                 order.getStatus(),
                 order.getPaymentMethodId(),
-                order.getPaymentStatus(),
-                order.getShippingAddressId(),
                 order.getShippingMethodId(),
+                order.getPaymentStatus(),
                 order.getSubtotal(),
-                order.getShippingCost(),
                 order.getTotal(),
-                order.getCustomerNotes(),
-                Timestamp.valueOf(OffsetDateTime.now().toLocalDateTime())
+                Timestamp.from(now.toInstant()),
+                Timestamp.from(now.toInstant())
         );
     }
 
@@ -61,10 +59,9 @@ public class OrderRepositoryImpl implements OrderRepository {
     @Transactional
     public CustomerOrder update(CustomerOrder order) {
         String sql = """
-            UPDATE customer_order 
-            SET status = ?, payment_method_id = ?, payment_status = ?, shipping_address_id = ?, 
-                shipping_method_id = ?, subtotal = ?, shipping_cost = ?, total = ?, 
-                cancelled_at = ?, customer_notes = ?
+            UPDATE customer_order
+            SET status = ?, payment_method_id = ?, payment_status = ?, shipping_method_id = ?,
+                subtotal = ?, total_amount = ?, updated_at = ?
             WHERE id = ?
             RETURNING *
             """;
@@ -74,13 +71,10 @@ public class OrderRepositoryImpl implements OrderRepository {
                     order.getStatus(),
                     order.getPaymentMethodId(),
                     order.getPaymentStatus(),
-                    order.getShippingAddressId(),
                     order.getShippingMethodId(),
                     order.getSubtotal(),
-                    order.getShippingCost(),
                     order.getTotal(),
-                    order.getCancelledAt() != null ? Timestamp.valueOf(order.getCancelledAt().toLocalDateTime()) : null,
-                    order.getCustomerNotes(),
+                    Timestamp.from(OffsetDateTime.now().toInstant()),
                     order.getId()
             );
         } catch (EmptyResultDataAccessException e) {
@@ -143,23 +137,6 @@ public class OrderRepositoryImpl implements OrderRepository {
         return jdbcTemplate.query(sql, orderMapper, status, size, JdbcUtils.calculateOffset(page, size));
     }
 
-    @Override
-    @Transactional(readOnly = true)
-    public List<CustomerOrder> findByUserIdAndStatus(UUID userId, String status, int page, int size) {
-        JdbcUtils.validatePagination(page, size);
-        String sql = "SELECT * FROM customer_order WHERE user_id = ? AND status = ? ORDER BY created_at DESC LIMIT ? OFFSET ?";
-        return jdbcTemplate.query(sql, orderMapper, userId, status, size, JdbcUtils.calculateOffset(page, size));
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public List<CustomerOrder> findByDateRange(LocalDateTime startDate, LocalDateTime endDate, int page, int size) {
-        JdbcUtils.validatePagination(page, size);
-        String sql = "SELECT * FROM customer_order WHERE created_at BETWEEN ? AND ? ORDER BY created_at DESC LIMIT ? OFFSET ?";
-        return jdbcTemplate.query(sql, orderMapper,
-                Timestamp.valueOf(startDate), Timestamp.valueOf(endDate),
-                size, JdbcUtils.calculateOffset(page, size));
-    }
 
     @Override
     @Transactional
@@ -223,4 +200,3 @@ public class OrderRepositoryImpl implements OrderRepository {
         }
     }
 }
-

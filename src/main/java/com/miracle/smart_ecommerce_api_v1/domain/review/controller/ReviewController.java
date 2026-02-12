@@ -43,6 +43,15 @@ public class ReviewController {
                 .body(ApiResponse.created(review, "Review submitted successfully"));
     }
 
+    @GetMapping
+    @Operation(summary = "Get all reviews", description = "Retrieve all reviews (paginated)")
+    public ResponseEntity<ApiResponse<PageResponse<ReviewResponse>>> getAllReviews(
+            @Parameter(description = "Page number (0-based)") @RequestParam(defaultValue = "0") int page,
+            @Parameter(description = "Page size") @RequestParam(defaultValue = "10") int size) {
+        PageResponse<ReviewResponse> reviews = reviewService.getAllReviews(page, size);
+        return ResponseEntity.ok(ApiResponse.success(reviews));
+    }
+
     @GetMapping("/{id}")
     @Operation(summary = "Get review by ID", description = "Retrieves a review by its unique ID")
     public ResponseEntity<ApiResponse<ReviewResponse>> getReviewById(
@@ -113,4 +122,3 @@ public class ReviewController {
         return ResponseEntity.ok(ApiResponse.success("Review deleted successfully"));
     }
 }
-

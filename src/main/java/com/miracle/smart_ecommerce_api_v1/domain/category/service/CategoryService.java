@@ -26,20 +26,6 @@ public interface CategoryService {
      */
     List<CategoryResponse> getAllCategories();
 
-    /**
-     * Get root categories (no parent)
-     */
-    List<CategoryResponse> getRootCategories();
-
-    /**
-     * Get category tree (hierarchical structure)
-     */
-    List<CategoryResponse> getCategoryTree();
-
-    /**
-     * Get subcategories by parent ID
-     */
-    List<CategoryResponse> getSubcategories(UUID parentId);
 
     /**
      * Update category
@@ -51,9 +37,5 @@ public interface CategoryService {
      */
     void deleteCategory(UUID id);
 
-    /**
-     * Count total categories
-     */
-    long countCategories();
 }
 

@@ -1,7 +1,7 @@
 # Smart E-Commerce GraphQL Schema
 # Defines types, queries, and mutations for the e-commerce API
 
-# Scalars - These must match the ExtendedScalars bean names
+
 scalar UUID
 scalar BigDecimal
 scalar OffsetDateTime
@@ -20,66 +20,46 @@ type User {
     isActive: Boolean!
     createdAt: OffsetDateTime
     updatedAt: OffsetDateTime
+    role: String
 }
 
 type Product {
     id: UUID!
     categoryId: UUID!
-    categoryName: String
-    sku: String
     name: String!
     description: String
     price: BigDecimal!
     stockQuantity: Int!
     isActive: Boolean!
-    inStock: Boolean!
     images: [String]
-    primaryImage: String
-    averageRating: Float
-    reviewCount: Int
     createdAt: OffsetDateTime
     updatedAt: OffsetDateTime
 }
 
 type Category {
     id: UUID!
-    parentCategoryId: UUID
     categoryName: String!
-    parentCategoryName: String
-    productCount: Int
-    subCategories: [Category]
 }
 
 type CartItem {
     id: UUID!
+    cartId: UUID!
     productId: UUID!
-    productName: String!
-    productImage: String
-    unitPrice: BigDecimal!
     quantity: Int!
-    subtotal: BigDecimal!
-    inStock: Boolean!
-    availableStock: Int
-    addedAt: OffsetDateTime
 }
 
 type Cart {
     id: UUID!
     userId: UUID!
-    totalItems: Int!
-    totalValue: BigDecimal!
     createdAt: OffsetDateTime
-    items: [CartItem]
 }
 
 type OrderItem {
     id: UUID!
+    orderId: UUID!
     productId: UUID!
-    productName: String!
-    productSku: String
     unitPrice: BigDecimal!
     quantity: Int!
-    totalPrice: BigDecimal!
 }
 
 type Order {
@@ -87,39 +67,23 @@ type Order {
     userId: UUID!
     orderNumber: String!
     status: String!
-    paymentStatus: String!
+    paymentMethodId: UUID
+    shippingMethodId: UUID
+    paymentStatus: String
     subtotal: BigDecimal!
-    shippingCost: BigDecimal
     total: BigDecimal!
-    itemCount: Int
-    customerNotes: String
     createdAt: OffsetDateTime
     cancelledAt: OffsetDateTime
-    items: [OrderItem]
 }
 
 type Review {
     id: UUID!
-    productId: UUID!
     userId: UUID!
-    userName: String
+    productId: UUID!
     rating: Int!
-    title: String
     comment: String
     createdAt: OffsetDateTime
     updatedAt: OffsetDateTime
-}
-
-type WishlistItem {
-    id: UUID!
-    userId: UUID!
-    productId: UUID!
-    productName: String
-    productSku: String
-    productPrice: BigDecimal
-    productImage: String
-    productInStock: Boolean
-    createdAt: OffsetDateTime
 }
 
 type Address {
@@ -130,9 +94,7 @@ type Address {
     region: String
     country: String!
     postalCode: String
-    isDefault: Boolean
     addressType: String
-    fullAddress: String
     createdAt: OffsetDateTime
 }
 
@@ -198,6 +160,7 @@ input CreateUserInput {
     lastName: String
     phoneNumber: String
     password: String!
+    role: String
 }
 
 input UpdateUserInput {
@@ -206,11 +169,11 @@ input UpdateUserInput {
     lastName: String
     phoneNumber: String
     password: String
+    role: String
 }
 
 input CreateProductInput {
     categoryId: UUID!
-    sku: String
     name: String!
     description: String
     price: BigDecimal!
@@ -221,7 +184,6 @@ input CreateProductInput {
 
 input UpdateProductInput {
     categoryId: UUID
-    sku: String
     name: String
     description: String
     price: BigDecimal
@@ -231,7 +193,6 @@ input UpdateProductInput {
 }
 
 input CreateCategoryInput {
-    parentCategoryId: UUID
     categoryName: String!
 }
 
@@ -252,13 +213,7 @@ input CreateReviewInput {
     productId: UUID!
     userId: UUID!
     rating: Int!
-    title: String
     comment: String
-}
-
-input AddToWishlistInput {
-    userId: UUID!
-    productId: UUID!
 }
 
 input CreateAddressInput {
@@ -268,8 +223,29 @@ input CreateAddressInput {
     region: String
     country: String!
     postalCode: String
-    isDefault: Boolean
     addressType: String
+}
+
+input OrderItemInput {
+    productId: UUID!
+    quantity: Int!
+}
+
+input CreateOrderInput {
+    userId: UUID!
+    paymentMethodId: UUID
+    shippingAddressId: UUID
+    shippingMethodId: UUID
+    customerNotes: String
+    items: [OrderItemInput!]!
+}
+
+input UpdateOrderInput {
+    paymentMethodId: UUID
+    shippingAddressId: UUID
+    shippingMethodId: UUID
+    status: String
+    paymentStatus: String
 }
 
 # ============================================================================
@@ -285,7 +261,6 @@ type Query {
 
     # Product queries
     product(id: UUID!): Product
-    productBySku(sku: String!): Product
     products(page: Int = 0, size: Int = 10): ProductPage!
     activeProducts(page: Int = 0, size: Int = 10): ProductPage!
     productsByCategory(categoryId: UUID!, page: Int = 0, size: Int = 10): ProductPage!
@@ -295,9 +270,6 @@ type Query {
     # Category queries
     category(id: UUID!): Category
     categories: [Category]!
-    rootCategories: [Category]!
-    categoryTree: [Category]!
-    subcategories(parentId: UUID!): [Category]!
 
     # Cart queries
     cart(userId: UUID!): Cart
@@ -317,17 +289,13 @@ type Query {
     productAverageRating(productId: UUID!): Float
     hasUserReviewedProduct(userId: UUID!, productId: UUID!): Boolean!
 
-    # Wishlist queries
-    wishlist(userId: UUID!): [WishlistItem]!
-    wishlistCount(userId: UUID!): Int!
-    isInWishlist(userId: UUID!, productId: UUID!): Boolean!
+
 
     # Address queries
     address(id: UUID!): Address
     addressesByUser(userId: UUID!): [Address]!
     shippingAddresses(userId: UUID!): [Address]!
     billingAddresses(userId: UUID!): [Address]!
-    defaultAddress(userId: UUID!): Address
 }
 
 # ============================================================================
@@ -361,21 +329,21 @@ type Mutation {
     removeFromCart(userId: UUID!, itemId: UUID!): Cart!
     clearCart(userId: UUID!): Boolean!
 
+    # Order mutations
+    createOrder(input: CreateOrderInput!): Order!
+    updateOrder(id: UUID!, input: UpdateOrderInput!): Order!
+    updateOrderStatus(id: UUID!, status: String!): Order!
+    updatePaymentStatus(id: UUID!, paymentStatus: String!): Order!
+    cancelOrder(id: UUID!): Order!
+    deleteOrder(id: UUID!): Boolean!
+
     # Review mutations
     createReview(input: CreateReviewInput!): Review!
     updateReview(id: UUID!, input: CreateReviewInput!): Review!
     deleteReview(id: UUID!): Boolean!
 
-    # Wishlist mutations
-    addToWishlist(input: AddToWishlistInput!): WishlistItem!
-    removeFromWishlist(id: UUID!): Boolean!
-    removeProductFromWishlist(userId: UUID!, productId: UUID!): Boolean!
-    clearWishlist(userId: UUID!): Boolean!
-    moveToCart(userId: UUID!, productId: UUID!): Boolean!
-
     # Address mutations
     createAddress(input: CreateAddressInput!): Address!
     updateAddress(id: UUID!, input: CreateAddressInput!): Address!
     deleteAddress(id: UUID!): Boolean!
-    setDefaultAddress(id: UUID!): Address!
 }

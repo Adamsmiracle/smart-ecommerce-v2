@@ -28,10 +28,6 @@ public class CreateReviewRequest {
     @Max(value = 5, message = "Rating cannot exceed 5")
     private Integer rating;
 
-    @Size(max = 200, message = "Review title cannot exceed 200 characters")
-    private String title;
-
     @Size(max = 2000, message = "Review comment cannot exceed 2000 characters")
     private String comment;
 }
-

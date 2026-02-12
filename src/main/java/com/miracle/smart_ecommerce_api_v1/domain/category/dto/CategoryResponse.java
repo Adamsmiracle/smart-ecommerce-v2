@@ -18,10 +18,7 @@ import java.util.UUID;
 public class CategoryResponse {
 
     private UUID id;
-    private UUID parentCategoryId;
     private String categoryName;
-    private String parentCategoryName;
-    private List<CategoryResponse> subCategories;
     private Long productCount;
 }
 

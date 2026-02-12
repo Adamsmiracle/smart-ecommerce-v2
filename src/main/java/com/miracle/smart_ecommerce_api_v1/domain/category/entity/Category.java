@@ -19,46 +19,15 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 @SuperBuilder
-@EqualsAndHashCode(callSuper = true)
-public class Category extends BaseModel {
+@EqualsAndHashCode(callSuper = false)
+public class Category {
 
-    private UUID parentCategoryId;
+    @NotNull(message = "id is required")
+    private UUID id;
 
     @NotBlank(message = "Category name is required")
     @Size(min = 2, max = 100, message = "Category name must be between 2 and 100 characters")
     private String categoryName;
 
-    // Transient fields for relationships (populated when needed)
-    private transient Category parentCategory;
-
-    @Builder.Default
-    private transient List<Category> subCategories = new ArrayList<>();
-
-    @Builder.Default
-    private transient List<Product> products = new ArrayList<>();
-
-    /**
-     * Check if this is a root category (no parent)
-     */
-    public boolean isRootCategory() {
-        return parentCategoryId == null;
-    }
-
-    /**
-     * Check if this category has subcategories
-     */
-    public boolean hasSubCategories() {
-        return subCategories != null && !subCategories.isEmpty();
-    }
-
-    /**
-     * Get the category path (e.g., "Electronics > Phones > Smartphones")
-     */
-    public String getCategoryPath() {
-        if (parentCategory == null) {
-            return categoryName;
-        }
-        return parentCategory.getCategoryPath() + " > " + categoryName;
-    }
 }
 

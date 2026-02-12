@@ -22,10 +22,9 @@ public class UserResponse {
     private String emailAddress;
     private String firstName;
     private String lastName;
-    private String fullName;
     private String phoneNumber;
     private Boolean isActive;
     private OffsetDateTime createdAt;
     private OffsetDateTime updatedAt;
-    private List<String> roles;
+    private String role;
 }

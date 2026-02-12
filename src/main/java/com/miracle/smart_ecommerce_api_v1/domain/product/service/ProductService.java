@@ -61,6 +61,7 @@ public interface ProductService {
      * Update product
      */
     ProductResponse updateProduct(UUID id, CreateProductRequest request);
+    ProductResponse updateProduct(UUID id, com.miracle.smart_ecommerce_api_v1.domain.product.dto.UpdateProductRequest request);
 
     /**
      * Delete product
@@ -87,4 +88,3 @@ public interface ProductService {
      */
     long countProducts();
 }
-

@@ -2,6 +2,7 @@ package com.miracle.smart_ecommerce_api_v1.domain.review.repository;
 
 import java.time.OffsetDateTime;
 
+import com.miracle.smart_ecommerce_api_v1.common.util.JdbcUtils;
 import com.miracle.smart_ecommerce_api_v1.domain.review.entity.ProductReview;
 import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -12,8 +13,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
-import java.time.LocalDateTime;
-import java.time.ZoneId;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -36,20 +35,19 @@ public class ReviewRepositoryImpl implements ReviewRepository {
     @Transactional
     public ProductReview save(ProductReview review) {
         String sql = """
-            INSERT INTO product_review (product_id, user_id, rating, title, comment, created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
-            RETURNING id, product_id, user_id, rating, title, comment, created_at, updated_at
-            """;
+                INSERT INTO product_review (product_id, user_id, rating, comment, created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?)
+                RETURNING id, product_id, user_id, rating, comment, created_at, updated_at
+                """;
 
         OffsetDateTime now = OffsetDateTime.now();
         return jdbcTemplate.queryForObject(sql, reviewRowMapper,
                 review.getProductId(),
                 review.getUserId(),
                 review.getRating(),
-                review.getTitle(),
                 review.getComment(),
-                Timestamp.valueOf(now.toLocalDateTime()),
-                Timestamp.valueOf(now.toLocalDateTime())
+                Timestamp.from(now.toInstant()),
+                Timestamp.from(now.toInstant())
         );
     }
 
@@ -57,17 +55,17 @@ public class ReviewRepositoryImpl implements ReviewRepository {
     @Transactional
     public ProductReview update(ProductReview review) {
         String sql = """
-            UPDATE product_review 
-            SET rating = ?, title = ?, comment = ?, updated_at = ?
-            WHERE id = ?
-            RETURNING id, product_id, user_id, rating, title, comment, created_at, updated_at
-            """;
+                UPDATE product_review
+                SET rating = ?, comment = ?, updated_at = ?
+                WHERE id = ?
+                RETURNING id, product_id, user_id, rating, comment, created_at, updated_at
+                """;
 
+        OffsetDateTime now = OffsetDateTime.now();
         return jdbcTemplate.queryForObject(sql, reviewRowMapper,
                 review.getRating(),
-                review.getTitle(),
                 review.getComment(),
-                Timestamp.valueOf(OffsetDateTime.now().toLocalDateTime()),
+                Timestamp.from(now.toInstant()),
                 review.getId()
         );
     }
@@ -100,14 +98,17 @@ public class ReviewRepositoryImpl implements ReviewRepository {
 
     @Override
     @Transactional(readOnly = true)
-    public Optional<ProductReview> findByUserIdAndProductId(UUID userId, UUID productId) {
-        String sql = "SELECT * FROM product_review WHERE user_id = ? AND product_id = ?";
-        try {
-            ProductReview review = jdbcTemplate.queryForObject(sql, reviewRowMapper, userId, productId);
-            return Optional.ofNullable(review);
-        } catch (EmptyResultDataAccessException e) {
-            return Optional.empty();
-        }
+    public List<ProductReview> findAll(int page, int size) {
+        String sql = "SELECT * FROM product_review ORDER BY created_at DESC LIMIT ? OFFSET ?";
+        return jdbcTemplate.query(sql, reviewRowMapper, size, page * size);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public long countAll() {
+        String sql = "SELECT COUNT(*) FROM product_review";
+        Long count = jdbcTemplate.queryForObject(sql, Long.class);
+        return count != null ? count : 0;
     }
 
     @Override
@@ -154,17 +155,14 @@ public class ReviewRepositoryImpl implements ReviewRepository {
     private static class ProductReviewRowMapper implements RowMapper<ProductReview> {
         @Override
         public ProductReview mapRow(ResultSet rs, int rowNum) throws SQLException {
-            Timestamp createdTs = rs.getTimestamp("created_at");
-            Timestamp updatedTs = rs.getTimestamp("updated_at");
             return ProductReview.builder()
                     .id(rs.getObject("id", UUID.class))
                     .productId(rs.getObject("product_id", UUID.class))
                     .userId(rs.getObject("user_id", UUID.class))
                     .rating(rs.getInt("rating"))
-                    .title(rs.getString("title"))
                     .comment(rs.getString("comment"))
-                    .createdAt(createdTs != null ? createdTs.toLocalDateTime().atZone(ZoneId.systemDefault()).toOffsetDateTime() : null)
-                    .updatedAt(updatedTs != null ? updatedTs.toLocalDateTime().atZone(ZoneId.systemDefault()).toOffsetDateTime() : null)
+                    .createdAt(JdbcUtils.getOffsetDateTime(rs, "created_at"))
+                    .updatedAt(JdbcUtils.getOffsetDateTime(rs, "updated_at"))
                     .build();
         }
     }

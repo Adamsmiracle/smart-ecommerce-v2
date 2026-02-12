@@ -26,9 +26,6 @@ public class Product extends BaseModel {
     @NotNull(message = "Category ID is required")
     private UUID categoryId;
 
-    @Size(max = 50, message = "SKU cannot exceed 50 characters")
-    private String sku;
-
     @NotBlank(message = "Product name is required")
     @Size(min = 2, max = 255, message = "Product name must be between 2 and 255 characters")
     private String name;
@@ -74,23 +71,6 @@ public class Product extends BaseModel {
     }
 
     /**
-     * Reserve stock for an order
-     */
-    public void reserveStock(int quantity) {
-        if (!canBeOrdered(quantity)) {
-            throw new IllegalStateException("Cannot reserve stock: insufficient quantity available");
-        }
-        this.stockQuantity -= quantity;
-    }
-
-    /**
-     * Release reserved stock (e.g., order cancellation)
-     */
-    public void releaseStock(int quantity) {
-        this.stockQuantity += quantity;
-    }
-
-    /**
      * Get primary image URL (first image or null)
      */
     public String getPrimaryImage() {
@@ -117,4 +97,3 @@ public class Product extends BaseModel {
         return reviews != null ? reviews.size() : 0;
     }
 }
-

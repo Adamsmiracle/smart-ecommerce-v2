@@ -30,13 +30,12 @@ public class CategoryRepositoryImpl implements CategoryRepository {
     @Transactional
     public Category save(Category category) {
         String sql = """
-            INSERT INTO product_category (parent_category_id, category_name)
-            VALUES (?, ?)
+            INSERT INTO product_category (category_name)
+            VALUES (?)
             RETURNING *
             """;
 
         return jdbcTemplate.queryForObject(sql, categoryRowMapper,
-                category.getParentCategoryId(),
                 category.getCategoryName()
         );
     }
@@ -45,15 +44,14 @@ public class CategoryRepositoryImpl implements CategoryRepository {
     @Transactional
     public Category update(Category category) {
         String sql = """
-            UPDATE product_category 
-            SET parent_category_id = ?, category_name = ?
+            UPDATE product_category
+            SET category_name = ?
             WHERE id = ?
             RETURNING *
             """;
 
         try {
             return jdbcTemplate.queryForObject(sql, categoryRowMapper,
-                    category.getParentCategoryId(),
                     category.getCategoryName(),
                     category.getId()
             );
@@ -93,18 +91,12 @@ public class CategoryRepositoryImpl implements CategoryRepository {
         return jdbcTemplate.query(sql, categoryRowMapper);
     }
 
-    @Override
-    @Transactional(readOnly = true)
-    public List<Category> findRootCategories() {
-        String sql = "SELECT * FROM product_category WHERE parent_category_id IS NULL ORDER BY category_name";
-        return jdbcTemplate.query(sql, categoryRowMapper);
-    }
 
     @Override
     @Transactional(readOnly = true)
     public List<Category> findByParentId(UUID parentId) {
-        String sql = "SELECT * FROM product_category WHERE parent_category_id = ? ORDER BY category_name";
-        return jdbcTemplate.query(sql, categoryRowMapper, parentId);
+        // parent_category_id not present in current schema; return empty list
+        return List.of();
     }
 
     @Override
@@ -141,12 +133,4 @@ public class CategoryRepositoryImpl implements CategoryRepository {
         return count != null ? count : 0;
     }
 
-    @Override
-    @Transactional(readOnly = true)
-    public long countByParentId(UUID parentId) {
-        String sql = "SELECT COUNT(*) FROM product_category WHERE parent_category_id = ?";
-        Long count = jdbcTemplate.queryForObject(sql, Long.class, parentId);
-        return count != null ? count : 0;
-    }
 }
-

@@ -16,7 +16,6 @@ import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -45,13 +44,7 @@ public class CategoryServiceImpl implements CategoryService {
             throw new DuplicateResourceException("Category", "name", request.getCategoryName());
         }
 
-        // Validate parent category if provided
-        if (request.getParentCategoryId() != null && !categoryRepository.existsById(request.getParentCategoryId())) {
-            throw ResourceNotFoundException.forResource("Parent Category", request.getParentCategoryId());
-        }
-
         Category category = Category.builder()
-                .parentCategoryId(request.getParentCategoryId())
                 .categoryName(request.getCategoryName())
                 .build();
 
@@ -67,7 +60,7 @@ public class CategoryServiceImpl implements CategoryService {
         }
 
         // Clear list cache
-        evictCache(CATEGORIES_CACHE);
+        evictCache();
 
         return response;
     }
@@ -92,39 +85,6 @@ public class CategoryServiceImpl implements CategoryService {
     }
 
     @Override
-    @Transactional(readOnly = true)
-    public List<CategoryResponse> getRootCategories() {
-        log.debug("Getting root categories");
-        return categoryRepository.findRootCategories().stream()
-                .map(this::mapToResponse)
-                .collect(Collectors.toList());
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public List<CategoryResponse> getCategoryTree() {
-        log.debug("Getting category tree");
-        List<Category> rootCategories = categoryRepository.findRootCategories();
-        return rootCategories.stream()
-                .map(this::buildCategoryTree)
-                .collect(Collectors.toList());
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public List<CategoryResponse> getSubcategories(UUID parentId) {
-        log.debug("Getting subcategories for parent: {}", parentId);
-
-        if (!categoryRepository.existsById(parentId)) {
-            throw ResourceNotFoundException.forResource("Category", parentId);
-        }
-
-        return categoryRepository.findByParentId(parentId).stream()
-                .map(this::mapToResponse)
-                .collect(Collectors.toList());
-    }
-
-    @Override
     @Transactional
     public CategoryResponse updateCategory(UUID id, CreateCategoryRequest request) {
         log.info("Updating category with ID: {}", id);
@@ -138,22 +98,13 @@ public class CategoryServiceImpl implements CategoryService {
             throw new DuplicateResourceException("Category", "name", request.getCategoryName());
         }
 
-        // Prevent circular reference
-        if (request.getParentCategoryId() != null) {
-            if (request.getParentCategoryId().equals(id)) {
-                throw new BadRequestException("Category cannot be its own parent");
-            }
-            if (!categoryRepository.existsById(request.getParentCategoryId())) {
-                throw ResourceNotFoundException.forResource("Parent Category", request.getParentCategoryId());
-            }
-        }
-
-        existingCategory.setParentCategoryId(request.getParentCategoryId());
+        // Apply the requested change
         existingCategory.setCategoryName(request.getCategoryName());
 
         Category updatedCategory = categoryRepository.update(existingCategory);
         log.info("Category updated successfully: {}", id);
 
+        // build response directly
         CategoryResponse response = mapToResponse(updatedCategory);
 
         // Update id cache
@@ -163,7 +114,7 @@ public class CategoryServiceImpl implements CategoryService {
         }
 
         // Clear list cache
-        evictCache(CATEGORIES_CACHE);
+        evictCache();
 
         return response;
     }
@@ -182,10 +133,6 @@ public class CategoryServiceImpl implements CategoryService {
             throw new BadRequestException("Cannot delete category with associated products");
         }
 
-        // Check if category has subcategories
-        if (categoryRepository.countByParentId(id) > 0) {
-            throw new BadRequestException("Cannot delete category with subcategories");
-        }
 
         categoryRepository.deleteById(id);
         log.info("Category deleted successfully: {}", id);
@@ -197,71 +144,28 @@ public class CategoryServiceImpl implements CategoryService {
         }
 
         // Clear list cache
-        evictCache(CATEGORIES_CACHE);
+        evictCache();
     }
-
-    @Override
-    @Transactional(readOnly = true)
-    public long countCategories() {
-        return categoryRepository.count();
-    }
-
-    // ========================================================================
-    // Helper Methods
-    // ========================================================================
 
     private CategoryResponse mapToResponse(Category category) {
         return CategoryResponse.builder()
                 .id(category.getId())
-                .parentCategoryId(category.getParentCategoryId())
                 .categoryName(category.getCategoryName())
                 .productCount(productRepository.countByCategoryId(category.getId()))
                 .build();
     }
 
     private CategoryResponse mapToResponseWithDetails(Category category) {
-        CategoryResponse response = mapToResponse(category);
-
-        // Add parent category name if exists
-        if (category.getParentCategoryId() != null) {
-            categoryRepository.findById(category.getParentCategoryId())
-                    .ifPresent(parent -> response.setParentCategoryName(parent.getCategoryName()));
-        }
-
-        // Add subcategories
-        List<CategoryResponse> subCategories = categoryRepository.findByParentId(category.getId())
-                .stream()
-                .map(this::mapToResponse)
-                .collect(Collectors.toList());
-        response.setSubCategories(subCategories);
-
-        return response;
-    }
-
-    private CategoryResponse buildCategoryTree(Category category) {
-        CategoryResponse response = mapToResponse(category);
-
-        List<Category> children = categoryRepository.findByParentId(category.getId());
-        if (!children.isEmpty()) {
-            List<CategoryResponse> childResponses = children.stream()
-                    .map(this::buildCategoryTree)
-                    .collect(Collectors.toList());
-            response.setSubCategories(childResponses);
-        } else {
-            response.setSubCategories(new ArrayList<>());
-        }
-
-        return response;
+        return mapToResponse(category);
     }
 
     /**
      * Helper method to evict all entries from a cache
      */
-    private void evictCache(String cacheName) {
-        Cache cache = cacheManager.getCache(cacheName);
+    private void evictCache() {
+        Cache cache = cacheManager.getCache(CATEGORIES_CACHE);
         if (cache != null) {
             cache.clear();
         }
     }
 }
-

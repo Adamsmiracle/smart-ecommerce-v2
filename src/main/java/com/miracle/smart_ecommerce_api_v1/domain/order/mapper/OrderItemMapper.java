@@ -17,16 +17,21 @@ public class OrderItemMapper implements RowMapper<OrderItem> {
 
     @Override
     public OrderItem mapRow(ResultSet rs, int rowNum) throws SQLException {
+        java.math.BigDecimal unitPrice = null;
+        try {
+            unitPrice = rs.getBigDecimal("unit_price");
+        } catch (SQLException ignored) {
+            // no-op
+        }
+
+        Integer qty = JdbcUtils.getInteger(rs, "quantity");
+
         return OrderItem.builder()
                 .id(JdbcUtils.getUUID(rs, "id"))
                 .orderId(JdbcUtils.getUUID(rs, "order_id"))
                 .productId(JdbcUtils.getUUID(rs, "product_id"))
-                .productName(rs.getString("product_name"))
-                .productSku(rs.getString("product_sku"))
-                .unitPrice(rs.getBigDecimal("unit_price"))
-                .quantity(JdbcUtils.getInteger(rs, "quantity"))
-                .totalPrice(rs.getBigDecimal("total_price"))
+                .unitPrice(unitPrice)
+                .quantity(qty)
                 .build();
     }
 }
-

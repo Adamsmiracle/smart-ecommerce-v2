@@ -122,7 +122,7 @@ public class ProductController {
     @Operation(summary = "Update product", description = "Updates an existing product")
     public ResponseEntity<ApiResponse<ProductResponse>> updateProduct(
             @Parameter(description = "Product ID") @PathVariable UUID id,
-            @Valid @RequestBody CreateProductRequest request) {
+            @RequestBody com.miracle.smart_ecommerce_api_v1.domain.product.dto.UpdateProductRequest request) {
         ProductResponse product = productService.updateProduct(id, request);
         return ResponseEntity.ok(ApiResponse.success(product, "Product updated successfully"));
     }

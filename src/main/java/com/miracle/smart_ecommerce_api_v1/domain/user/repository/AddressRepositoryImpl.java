@@ -5,6 +5,7 @@ import java.time.OffsetDateTime;
 import com.miracle.smart_ecommerce_api_v1.domain.user.entity.Address;
 import com.miracle.smart_ecommerce_api_v1.domain.user.mapper.AddressMapper;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
@@ -21,6 +22,7 @@ import java.util.UUID;
  */
 @Repository
 @RequiredArgsConstructor
+@Slf4j
 public class AddressRepositoryImpl implements AddressRepository {
 
     private final JdbcTemplate jdbcTemplate;
@@ -30,9 +32,9 @@ public class AddressRepositoryImpl implements AddressRepository {
     @Transactional
     public Address save(Address address) {
         String sql = """
-            INSERT INTO address (user_id, address_line, city, region, country, postal_code, is_default, address_type, created_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-            RETURNING id, user_id, address_line, city, region, country, postal_code, is_default, address_type, created_at
+            INSERT INTO address (user_id, address_line, city, region, country, postal_code, address_type, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            RETURNING id, user_id, address_line, city, region, country, postal_code, address_type, created_at
             """;
 
         OffsetDateTime now = OffsetDateTime.now();
@@ -43,9 +45,8 @@ public class AddressRepositoryImpl implements AddressRepository {
                 address.getRegion(),
                 address.getCountry(),
                 address.getPostalCode(),
-                address.getIsDefault() != null ? address.getIsDefault() : false,
                 address.getAddressType() != null ? address.getAddressType() : "shipping",
-                Timestamp.valueOf(now.toLocalDateTime())
+                Timestamp.from(now.toInstant())
         );
     }
 
@@ -54,9 +55,9 @@ public class AddressRepositoryImpl implements AddressRepository {
     public Address update(Address address) {
         String sql = """
             UPDATE address 
-            SET address_line = ?, city = ?, region = ?, country = ?, postal_code = ?, is_default = ?, address_type = ?
+            SET address_line = ?, city = ?, region = ?, country = ?, postal_code = ?, address_type = ?
             WHERE id = ?
-            RETURNING id, user_id, address_line, city, region, country, postal_code, is_default, address_type, created_at
+            RETURNING id, user_id, address_line, city, region, country, postal_code, address_type, created_at
             """;
 
         return jdbcTemplate.queryForObject(sql, addressMapper,
@@ -65,7 +66,6 @@ public class AddressRepositoryImpl implements AddressRepository {
                 address.getRegion(),
                 address.getCountry(),
                 address.getPostalCode(),
-                address.getIsDefault(),
                 address.getAddressType(),
                 address.getId()
         );
@@ -86,28 +86,37 @@ public class AddressRepositoryImpl implements AddressRepository {
     @Override
     @Transactional(readOnly = true)
     public List<Address> findAll() {
-        String sql = "SELECT * FROM address ORDER BY created_at DESC";
-        return jdbcTemplate.query(sql, addressMapper);
+        String sql = "SELECT id, user_id, address_line, city, region, country, postal_code, address_type, created_at FROM address ORDER BY created_at DESC";
+        List<Address> list = jdbcTemplate.query(sql, addressMapper);
+        log.debug("findAll addresses SQL executed, returned {} rows", list.size());
+        return list;
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<Address> findByUserId(UUID userId) {
-        String sql = "SELECT * FROM address WHERE user_id = ? ORDER BY is_default DESC, created_at DESC";
-        return jdbcTemplate.query(sql, addressMapper, userId);
+        String sql = "SELECT id, user_id, address_line, city, region, country, postal_code, address_type, created_at FROM address WHERE user_id = ? ORDER BY created_at DESC";
+        List<Address> list = jdbcTemplate.query(sql, addressMapper, userId);
+        log.info("findByUserId executed for userId={} SQL='{}' returned {} rows", userId, sql, list.size());
+        return list;
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<Address> findByUserIdAndType(UUID userId, String addressType) {
-        String sql = "SELECT * FROM address WHERE user_id = ? AND address_type = ? ORDER BY is_default DESC, created_at DESC";
-        return jdbcTemplate.query(sql, addressMapper, userId, addressType);
+        // Compare lower-case and treat NULL as 'shipping' so older rows without type are considered shipping by default
+        String sql = "SELECT id, user_id, address_line, city, region, country, postal_code, address_type, created_at FROM address " +
+                     "WHERE user_id = ? AND LOWER(COALESCE(address_type, 'shipping')) = LOWER(?) ORDER BY created_at DESC";
+        List<Address> list = jdbcTemplate.query(sql, addressMapper, userId, addressType);
+        log.info("findByUserIdAndType executed for userId={} type={} returned {} rows", userId, addressType, list.size());
+        return list;
     }
 
     @Override
     @Transactional(readOnly = true)
     public Optional<Address> findDefaultByUserId(UUID userId) {
-        String sql = "SELECT * FROM address WHERE user_id = ? AND is_default = true LIMIT 1";
+        // Schema doesn't include is_default. Return most recent address as default.
+        String sql = "SELECT id, user_id, address_line, city, region, country, postal_code, address_type, created_at FROM address WHERE user_id = ? ORDER BY created_at DESC LIMIT 1";
         try {
             Address address = jdbcTemplate.queryForObject(sql, addressMapper, userId);
             return Optional.ofNullable(address);
@@ -134,8 +143,6 @@ public class AddressRepositoryImpl implements AddressRepository {
     @Override
     @Transactional
     public void clearDefaultForUserAndType(UUID userId, String addressType) {
-        String sql = "UPDATE address SET is_default = false WHERE user_id = ? AND address_type = ?";
-        jdbcTemplate.update(sql, userId, addressType);
+        // No is_default column in schema. This method is a no-op.
     }
 }
-

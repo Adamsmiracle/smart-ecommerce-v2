@@ -21,21 +21,19 @@ import java.util.Set;
  */
 @Component
 public class UserMapper implements RowMapper<User> {
-
-    private final ObjectMapper objectMapper = new ObjectMapper();
-
     @Override
     public User mapRow(ResultSet rs, int rowNum) throws SQLException {
-        // Parse roles JSONB column
-        Set<String> roles = new HashSet<>();
+
+        String role = null;
         try {
-            String rolesJson = rs.getString("roles");
-            if (rolesJson != null && !rolesJson.isBlank()) {
-                roles = objectMapper.readValue(rolesJson, new TypeReference<Set<String>>() {});
+            role = rs.getString("roles");
+        } catch (SQLException ex) {
+            // column may be 'role' instead of 'roles' depending on DB migrations
+            try {
+                role = rs.getString("role");
+            } catch (SQLException ex2) {
+                role = null;
             }
-        } catch (Exception e) {
-            // fallback to default ROLE_USER
-            roles = new HashSet<>(Collections.singletonList("ROLE_USER"));
         }
 
         return User.builder()
@@ -46,10 +44,9 @@ public class UserMapper implements RowMapper<User> {
                 .phoneNumber(rs.getString("phone_number"))
                 .passwordHash(rs.getString("password_hash"))
                 .isActive(JdbcUtils.getBoolean(rs, "is_active"))
-                // FIX: Convert LocalDateTime to OffsetDateTime by adding timezone
-                .createdAt(JdbcUtils.getLocalDateTime(rs, "created_at").toLocalDateTime().atOffset(ZoneOffset.UTC))
-                .updatedAt(JdbcUtils.getLocalDateTime(rs, "updated_at").toLocalDateTime().atOffset(ZoneOffset.UTC))
-                .roles(roles)
+                .createdAt(JdbcUtils.getOffsetDateTime(rs, "created_at"))
+                .updatedAt(JdbcUtils.getOffsetDateTime(rs, "updated_at"))
+                .role(role)
                 .build();
     }
 }

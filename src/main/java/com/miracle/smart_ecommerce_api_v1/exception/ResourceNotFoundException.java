@@ -1,8 +1,11 @@
 package com.miracle.smart_ecommerce_api_v1.exception;
 
+import lombok.Getter;
+
 /**
  * Thrown when a requested resource cannot be found.
  */
+@Getter
 public class ResourceNotFoundException extends RuntimeException {
 
     private final String resourceName;
@@ -44,16 +47,5 @@ public class ResourceNotFoundException extends RuntimeException {
         return new ResourceNotFoundException(resourceName, "id", id);
     }
 
-    public String getResourceName() {
-        return resourceName;
-    }
-
-    public String getFieldName() {
-        return fieldName;
-    }
-
-    public Object getFieldValue() {
-        return fieldValue;
-    }
 }
 

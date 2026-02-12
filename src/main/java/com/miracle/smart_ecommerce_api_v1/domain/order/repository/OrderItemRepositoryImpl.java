@@ -16,6 +16,7 @@ import java.util.UUID;
 /**
  * JDBC implementation of OrderItemRepository.
  */
+
 @Repository
 public class OrderItemRepositoryImpl implements OrderItemRepository {
 
@@ -31,19 +32,16 @@ public class OrderItemRepositoryImpl implements OrderItemRepository {
     @Transactional
     public OrderItem save(OrderItem item) {
         String sql = """
-            INSERT INTO order_item (order_id, product_id, product_name, product_sku, unit_price, quantity, total_price)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
-            RETURNING id, order_id, product_id, product_name, product_sku, unit_price, quantity, total_price
+            INSERT INTO order_item (order_id, product_id, unit_price, quantity)
+            VALUES (?, ?, ?, ?)
+            RETURNING id, order_id, product_id, unit_price, quantity
             """;
 
         return jdbcTemplate.queryForObject(sql, orderItemRowMapper,
                 item.getOrderId(),
                 item.getProductId(),
-                item.getProductName(),
-                item.getProductSku(),
                 item.getUnitPrice(),
-                item.getQuantity(),
-                item.getTotalPrice()
+                item.getQuantity()
         );
     }
 
@@ -98,13 +96,9 @@ public class OrderItemRepositoryImpl implements OrderItemRepository {
                     .id(rs.getObject("id", UUID.class))
                     .orderId(rs.getObject("order_id", UUID.class))
                     .productId(rs.getObject("product_id", UUID.class))
-                    .productName(rs.getString("product_name"))
-                    .productSku(rs.getString("product_sku"))
                     .unitPrice(rs.getBigDecimal("unit_price"))
                     .quantity(rs.getInt("quantity"))
-                    .totalPrice(rs.getBigDecimal("total_price"))
                     .build();
         }
     }
 }
-

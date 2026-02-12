@@ -56,12 +56,11 @@ public class AddressServiceImpl implements AddressService {
                 .region(request.getRegion())
                 .country(request.getCountry())
                 .postalCode(request.getPostalCode())
-                .isDefault(request.getIsDefault())
                 .addressType(request.getAddressType())
                 .build();
 
         Address savedAddress = addressRepository.save(address);
-        log.info("Address created successfully with ID: {}", savedAddress.getId());
+        log.info("Address created successfully with ID: {} and createdAt: {}", savedAddress.getId(), savedAddress.getCreatedAt());
 
         return mapToResponse(savedAddress);
     }
@@ -89,28 +88,25 @@ public class AddressServiceImpl implements AddressService {
     @Transactional(readOnly = true)
     public List<AddressResponse> getAddressesByUserId(UUID userId) {
         log.debug("Getting addresses for user: {}", userId);
-        return addressRepository.findByUserId(userId).stream()
+        List<AddressResponse> addresses = addressRepository.findByUserId(userId).stream()
                 .map(this::mapToResponse)
                 .collect(Collectors.toList());
+        log.info("Found {} addresses for userId: {}", addresses.size(), userId);
+        return addresses;
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<AddressResponse> getAddressesByUserIdAndType(UUID userId, String addressType) {
         log.debug("Getting {} addresses for user: {}", addressType, userId);
-        return addressRepository.findByUserIdAndType(userId, addressType).stream()
+        List<AddressResponse> addresses = addressRepository.findByUserIdAndType(userId, addressType).stream()
                 .map(this::mapToResponse)
                 .collect(Collectors.toList());
+        log.info("Found {} {} addresses for userId: {}", addresses.size(), addressType, userId);
+        return addresses;
     }
 
-    @Override
-    @Transactional(readOnly = true)
-    public AddressResponse getDefaultAddress(UUID userId) {
-        log.debug("Getting default address for user: {}", userId);
-        Address address = addressRepository.findDefaultByUserId(userId)
-                .orElseThrow(() -> new ResourceNotFoundException("Default address", "userId", userId.toString()));
-        return mapToResponse(address);
-    }
+
 
     @Override
     @Transactional
@@ -121,17 +117,12 @@ public class AddressServiceImpl implements AddressService {
         Address existingAddress = addressRepository.findById(id)
                 .orElseThrow(() -> ResourceNotFoundException.forResource("Address", id));
 
-        // If this is set as default, unset other defaults
-        if (Boolean.TRUE.equals(request.getIsDefault()) && !Boolean.TRUE.equals(existingAddress.getIsDefault())) {
-            addressRepository.clearDefaultForUserAndType(existingAddress.getUserId(), request.getAddressType());
-        }
 
         existingAddress.setAddressLine(request.getAddressLine());
         existingAddress.setCity(request.getCity());
         existingAddress.setRegion(request.getRegion());
         existingAddress.setCountry(request.getCountry());
         existingAddress.setPostalCode(request.getPostalCode());
-        existingAddress.setIsDefault(request.getIsDefault());
         existingAddress.setAddressType(request.getAddressType());
 
         Address updatedAddress = addressRepository.update(existingAddress);
@@ -153,7 +144,6 @@ public class AddressServiceImpl implements AddressService {
         addressRepository.clearDefaultForUserAndType(address.getUserId(), address.getAddressType());
 
         // Set this address as default
-        address.setIsDefault(true);
         Address updatedAddress = addressRepository.update(address);
 
         log.info("Default address set successfully: {}", id);
@@ -185,11 +175,9 @@ public class AddressServiceImpl implements AddressService {
                 .region(address.getRegion())
                 .country(address.getCountry())
                 .postalCode(address.getPostalCode())
-                .isDefault(address.getIsDefault())
                 .addressType(address.getAddressType())
                 // createdAt is already an OffsetDateTime in BaseModel; guard against null
                 .createdAt(address.getCreatedAt())
                 .build();
     }
 }
-

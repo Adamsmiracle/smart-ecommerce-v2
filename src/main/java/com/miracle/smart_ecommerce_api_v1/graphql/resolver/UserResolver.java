@@ -2,6 +2,7 @@ package com.miracle.smart_ecommerce_api_v1.graphql.resolver;
 
 import com.miracle.smart_ecommerce_api_v1.common.response.PageResponse;
 import com.miracle.smart_ecommerce_api_v1.domain.user.dto.request.CreateUserRequest;
+import com.miracle.smart_ecommerce_api_v1.domain.user.dto.request.UpdateUserRequest;
 import com.miracle.smart_ecommerce_api_v1.domain.user.dto.response.UserResponse;
 import com.miracle.smart_ecommerce_api_v1.domain.user.service.UserService;
 import lombok.RequiredArgsConstructor;
@@ -67,12 +68,12 @@ public class UserResolver {
 
     @MutationMapping
     public UserResponse updateUser(@Argument UUID id, @Argument Map<String, Object> input) {
-        CreateUserRequest request = CreateUserRequest.builder()
+        UpdateUserRequest request = UpdateUserRequest.builder()
                 .emailAddress((String) input.get("emailAddress"))
                 .firstName((String) input.get("firstName"))
                 .lastName((String) input.get("lastName"))
                 .phoneNumber((String) input.get("phoneNumber"))
-                .password((String) input.get("password"))
+                .role((String) input.get("role"))
                 .build();
         return userService.updateUser(id, request);
     }

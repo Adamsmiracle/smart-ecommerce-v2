@@ -24,7 +24,6 @@ public class AddressResponse {
     private String region;
     private String country;
     private String postalCode;
-    private Boolean isDefault;
     private String addressType;
     private OffsetDateTime createdAt;
 

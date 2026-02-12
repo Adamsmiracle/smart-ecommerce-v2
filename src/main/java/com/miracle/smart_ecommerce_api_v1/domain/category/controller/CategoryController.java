@@ -52,28 +52,6 @@ public class CategoryController {
         return ResponseEntity.ok(ApiResponse.success(categories));
     }
 
-    @GetMapping("/root")
-    @Operation(summary = "Get root categories", description = "Retrieves all root categories (no parent)")
-    public ResponseEntity<ApiResponse<List<CategoryResponse>>> getRootCategories() {
-        List<CategoryResponse> categories = categoryService.getRootCategories();
-        return ResponseEntity.ok(ApiResponse.success(categories));
-    }
-
-    @GetMapping("/tree")
-    @Operation(summary = "Get category tree", description = "Retrieves hierarchical category structure")
-    public ResponseEntity<ApiResponse<List<CategoryResponse>>> getCategoryTree() {
-        List<CategoryResponse> categories = categoryService.getCategoryTree();
-        return ResponseEntity.ok(ApiResponse.success(categories));
-    }
-
-    @GetMapping("/{parentId}/subcategories")
-    @Operation(summary = "Get subcategories", description = "Retrieves subcategories by parent ID")
-    public ResponseEntity<ApiResponse<List<CategoryResponse>>> getSubcategories(
-            @Parameter(description = "Parent category ID") @PathVariable UUID parentId) {
-        List<CategoryResponse> categories = categoryService.getSubcategories(parentId);
-        return ResponseEntity.ok(ApiResponse.success(categories));
-    }
-
     @PutMapping("/{id}")
     @Operation(summary = "Update category", description = "Updates an existing category")
     public ResponseEntity<ApiResponse<CategoryResponse>> updateCategory(

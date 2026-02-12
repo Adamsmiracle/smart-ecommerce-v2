@@ -7,6 +7,7 @@ import lombok.*;
 import lombok.experimental.SuperBuilder;
 
 import java.time.LocalDate;
+import java.time.OffsetDateTime;
 import java.util.UUID;
 
 /**
@@ -17,29 +18,31 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 @SuperBuilder
-@EqualsAndHashCode(callSuper = true)
-public class PaymentMethod extends BaseModel {
+@EqualsAndHashCode(callSuper = false)
+public class PaymentMethod {
+
+    @NotNull(message = "is is required")
+    private UUID id;
 
     @NotNull(message = "User ID is required")
     private UUID userId;
 
     @NotBlank(message = "Payment type is required")
     @Size(max = 50, message = "Payment type cannot exceed 50 characters")
-    private String paymentType; // 'credit_card', 'debit_card', 'paypal', etc.
+    private String paymentType;
 
     @Size(max = 100, message = "Provider cannot exceed 100 characters")
-    private String provider; // 'Visa', 'Mastercard', 'PayPal'
+    private String provider;
 
     @NotBlank(message = "Account number is required")
-    private String accountNumber; // Should be encrypted/masked
+    private String accountNumber;
 
-    private LocalDate expiryDate;
+    @NotNull(message = "Expiry date is required")
 
-    @Builder.Default
-    private Boolean isDefault = false;
+    private OffsetDateTime expiryDate;
 
-    // Transient field for user (populated when needed)
-    private transient User user;
+    @NotNull(message = "createAt is required")
+    private OffsetDateTime createdAt;
 
     /**
      * Get masked account number (show last 4 digits only)
@@ -49,16 +52,6 @@ public class PaymentMethod extends BaseModel {
             return "****";
         }
         return "**** **** **** " + accountNumber.substring(accountNumber.length() - 4);
-    }
-
-    /**
-     * Check if payment method is expired
-     */
-    public boolean isExpired() {
-        if (expiryDate == null) {
-            return false;
-        }
-        return expiryDate.isBefore(LocalDate.now());
     }
 
     /**

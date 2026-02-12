@@ -16,22 +16,18 @@ import java.util.UUID;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@SuperBuilder
-@EqualsAndHashCode(callSuper = true)
-public class OrderItem extends BaseModel {
+@Builder
+@EqualsAndHashCode(callSuper = false)
+public class OrderItem {
+
+    @NotNull(message = "id is required")
+    private UUID id;
 
     @NotNull(message = "Order ID is required")
     private UUID orderId;
 
     @NotNull(message = "Product ID is required")
     private UUID productId;
-
-    @NotBlank(message = "Product name is required")
-    @Size(max = 255, message = "Product name cannot exceed 255 characters")
-    private String productName;
-
-    @Size(max = 50, message = "Product SKU cannot exceed 50 characters")
-    private String productSku;
 
     @NotNull(message = "Unit price is required")
     @DecimalMin(value = "0.00", message = "Unit price must be non-negative")
@@ -41,22 +37,12 @@ public class OrderItem extends BaseModel {
     @Min(value = 1, message = "Quantity must be at least 1")
     private Integer quantity;
 
-    @NotNull(message = "Total price is required")
-    @DecimalMin(value = "0.00", message = "Total price must be non-negative")
-    private BigDecimal totalPrice;
-
-    // Transient fields for relationships (populated when needed)
-    private transient CustomerOrder order;
-    private transient Product product;
-
-    /**
-     * Calculate total price based on unit price and quantity
-     */
-    public void calculateTotalPrice() {
-        if (unitPrice != null && quantity != null) {
-            this.totalPrice = unitPrice.multiply(BigDecimal.valueOf(quantity));
-        }
+    // Derived total price (not stored in DB). Use getter to compute when needed.
+    public BigDecimal getTotalPrice() {
+        if (unitPrice == null || quantity == null) return BigDecimal.ZERO;
+        return unitPrice.multiply(BigDecimal.valueOf(quantity));
     }
+
 
     /**
      * Create order item from product
@@ -70,17 +56,11 @@ public class OrderItem extends BaseModel {
         }
 
         BigDecimal unitPrice = product.getPrice();
-        BigDecimal totalPrice = unitPrice.multiply(BigDecimal.valueOf(quantity));
 
         return OrderItem.builder()
                 .productId(product.getId())
-                .productName(product.getName())
-                .productSku(product.getSku())
                 .unitPrice(unitPrice)
                 .quantity(quantity)
-                .totalPrice(totalPrice)
-                .product(product)
                 .build();
     }
 }
-

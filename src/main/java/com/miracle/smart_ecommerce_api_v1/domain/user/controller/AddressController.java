@@ -81,13 +81,6 @@ public class AddressController {
         return ResponseEntity.ok(ApiResponse.success(addresses));
     }
 
-    @GetMapping("/user/{userId}/default")
-    @Operation(summary = "Get user default address", description = "Retrieves the default address for a user")
-    public ResponseEntity<ApiResponse<AddressResponse>> getDefaultAddress(
-            @Parameter(description = "User ID") @PathVariable UUID userId) {
-        AddressResponse address = addressService.getDefaultAddress(userId);
-        return ResponseEntity.ok(ApiResponse.success(address));
-    }
 
     @PutMapping("/{id}")
     @Operation(summary = "Update address", description = "Updates an existing address")
@@ -98,13 +91,6 @@ public class AddressController {
         return ResponseEntity.ok(ApiResponse.success(address, "Address updated successfully"));
     }
 
-    @PatchMapping("/{id}/set-default")
-    @Operation(summary = "Set as default address", description = "Sets an address as the default for its user")
-    public ResponseEntity<ApiResponse<AddressResponse>> setDefaultAddress(
-            @Parameter(description = "Address ID") @PathVariable UUID id) {
-        AddressResponse address = addressService.setDefaultAddress(id);
-        return ResponseEntity.ok(ApiResponse.success(address, "Default address updated successfully"));
-    }
 
     @DeleteMapping("/{id}")
     @Operation(summary = "Delete address", description = "Deletes an address by ID")

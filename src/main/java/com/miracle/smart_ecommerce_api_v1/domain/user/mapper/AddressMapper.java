@@ -25,9 +25,8 @@ public class AddressMapper implements RowMapper<Address> {
                 .region(rs.getString("region"))
                 .country(rs.getString("country"))
                 .postalCode(rs.getString("postal_code"))
-                .isDefault(JdbcUtils.getBoolean(rs, "is_default"))
                 .addressType(rs.getString("address_type"))
+                .createdAt(JdbcUtils.getOffsetDateTime(rs, "created_at"))
                 .build();
     }
 }
-

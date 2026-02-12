@@ -2,6 +2,7 @@ package com.miracle.smart_ecommerce_api_v1.domain.user.service;
 
 import com.miracle.smart_ecommerce_api_v1.common.response.PageResponse;
 import com.miracle.smart_ecommerce_api_v1.domain.user.dto.request.CreateUserRequest;
+import com.miracle.smart_ecommerce_api_v1.domain.user.dto.request.UpdateUserRequest;
 import com.miracle.smart_ecommerce_api_v1.domain.user.dto.response.UserResponse;
 
 import java.util.List;
@@ -40,7 +41,7 @@ public interface UserService {
     /**
      * Update user
      */
-    UserResponse updateUser(UUID id, CreateUserRequest request);
+    UserResponse updateUser(UUID id, UpdateUserRequest request);
 
     /**
      * Delete user
@@ -65,5 +66,5 @@ public interface UserService {
     /**
      * Update roles for a user (admin only)
      */
-    void updateUserRoles(UUID id, List<String> roles);
+//    void updateUserRoles(UUID id, List<String> roles);
 }

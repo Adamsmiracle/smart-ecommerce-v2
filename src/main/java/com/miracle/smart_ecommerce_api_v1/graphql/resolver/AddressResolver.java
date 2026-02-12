@@ -47,11 +47,6 @@ public class AddressResolver {
         return addressService.getAddressesByUserIdAndType(userId, "billing");
     }
 
-    @QueryMapping
-    public AddressResponse defaultAddress(@Argument UUID userId) {
-        return addressService.getDefaultAddress(userId);
-    }
-
     // ========================================================================
     // ADDRESS MUTATIONS
     // ========================================================================
@@ -92,9 +87,6 @@ public class AddressResolver {
         return true;
     }
 
-    @MutationMapping
-    public AddressResponse setDefaultAddress(@Argument UUID id) {
-        return addressService.setDefaultAddress(id);
-    }
+
 }
 

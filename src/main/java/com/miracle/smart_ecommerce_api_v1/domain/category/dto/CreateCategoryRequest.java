@@ -6,8 +6,6 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.util.UUID;
-
 /**
  * Request DTO for creating a new category.
  */
@@ -17,10 +15,7 @@ import java.util.UUID;
 @AllArgsConstructor
 public class CreateCategoryRequest {
 
-    private UUID parentCategoryId;
-
     @NotBlank(message = "Category name is required")
     @Size(min = 2, max = 100, message = "Category name must be between 2 and 100 characters")
     private String categoryName;
 }
-

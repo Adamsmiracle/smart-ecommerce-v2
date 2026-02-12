@@ -1,83 +1,9 @@
 package com.miracle.smart_ecommerce_api_v1.security;
 
-import com.miracle.smart_ecommerce_api_v1.domain.user.entity.User;
-import com.miracle.smart_ecommerce_api_v1.domain.user.repository.UserRepository;
-import jakarta.servlet.FilterChain;
-import jakarta.servlet.ServletException;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
-import lombok.RequiredArgsConstructor;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
-import org.springframework.stereotype.Component;
-import org.springframework.util.StringUtils;
-import org.springframework.web.filter.OncePerRequestFilter;
+// JWT filter removed. Project no longer uses Spring Security filters; this placeholder keeps
+// the package layout but does not register any bean or reference Spring Security APIs.
+// File intentionally left minimal following the removal of Spring Security.
 
-import java.io.IOException;
-import java.util.Collection;
-import java.util.List;
-import java.util.UUID;
-import java.util.stream.Collectors;
-
-/**
- * JWT Authentication Filter - validates JWT token on each request.
- */
-@Component
-@RequiredArgsConstructor
-public class JwtAuthenticationFilter extends OncePerRequestFilter {
-
-    private static final Logger log = LoggerFactory.getLogger(JwtAuthenticationFilter.class);
-
-    private final JwtTokenProvider tokenProvider;
-    private final UserRepository userRepository;
-
-    @Override
-    protected void doFilterInternal(HttpServletRequest request,
-                                    HttpServletResponse response,
-                                    FilterChain filterChain) throws ServletException, IOException {
-        try {
-            String jwt = getJwtFromRequest(request);
-
-            if (StringUtils.hasText(jwt) && tokenProvider.validateToken(jwt)) {
-                UUID userId = tokenProvider.getUserIdFromToken(jwt);
-
-                User user = userRepository.findById(userId).orElse(null);
-
-                if (user != null && Boolean.TRUE.equals(user.getIsActive())) {
-                    // derive authorities from roles
-                    Collection<SimpleGrantedAuthority> authorities = (user.getRoles() == null || user.getRoles().isEmpty())
-                            ? List.of(new SimpleGrantedAuthority("ROLE_USER"))
-                            : user.getRoles().stream().map(SimpleGrantedAuthority::new).collect(Collectors.toList());
-
-                    UsernamePasswordAuthenticationToken authentication =
-                            new UsernamePasswordAuthenticationToken(
-                                    user,
-                                    null,
-                                    authorities
-                            );
-
-                    authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-                    SecurityContextHolder.getContext().setAuthentication(authentication);
-
-                    log.debug("Authenticated user: {} with roles: {}", user.getEmailAddress(), user.getRoles());
-                }
-            }
-        } catch (Exception ex) {
-            log.error("Could not set user authentication in security context", ex);
-        }
-
-        filterChain.doFilter(request, response);
-    }
-
-    private String getJwtFromRequest(HttpServletRequest request) {
-        String bearerToken = request.getHeader("Authorization");
-        if (StringUtils.hasText(bearerToken) && bearerToken.startsWith("Bearer ")) {
-            return bearerToken.substring(7);
-        }
-        return null;
-    }
+public final class JwtAuthenticationFilter {
+    private JwtAuthenticationFilter() {}
 }

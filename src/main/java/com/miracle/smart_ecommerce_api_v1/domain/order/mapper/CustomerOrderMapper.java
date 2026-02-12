@@ -7,8 +7,6 @@ import org.springframework.stereotype.Component;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.time.OffsetDateTime;
-import java.time.ZoneOffset;
 
 /**
  * RowMapper for CustomerOrder domain model.
@@ -24,19 +22,12 @@ public class CustomerOrderMapper implements RowMapper<CustomerOrder> {
                 .orderNumber(rs.getString("order_number"))
                 .status(rs.getString("status"))
                 .paymentMethodId(JdbcUtils.getUUID(rs, "payment_method_id"))
-                .paymentStatus(rs.getString("payment_status"))
-                .shippingAddressId(JdbcUtils.getUUID(rs, "shipping_address_id"))
                 .shippingMethodId(JdbcUtils.getUUID(rs, "shipping_method_id"))
+                .paymentStatus(rs.getString("payment_status"))
                 .subtotal(rs.getBigDecimal("subtotal"))
-                .shippingCost(rs.getBigDecimal("shipping_cost"))
-                .total(rs.getBigDecimal("total"))
-                .customerNotes(rs.getString("customer_notes"))
-                // FIXED: Convert LocalDateTime to OffsetDateTime properly
-                .createdAt(JdbcUtils.getLocalDateTime(rs, "created_at").toLocalDateTime().atOffset(ZoneOffset.UTC))
-                // FIXED: Handle nullable cancelledAt field
-                .cancelledAt(JdbcUtils.getLocalDateTime(rs, "cancelled_at") != null
-                        ? JdbcUtils.getLocalDateTime(rs, "cancelled_at").toLocalDateTime().atOffset(ZoneOffset.UTC)
-                        : null)
+                .total(rs.getBigDecimal("total_amount"))
+                .createdAt(JdbcUtils.getOffsetDateTime(rs, "created_at"))
+                .updatedAt(JdbcUtils.getOffsetDateTime(rs, "updated_at"))
                 .build();
     }
 }

@@ -35,11 +35,6 @@ public class ProductResolver {
     }
 
     @QueryMapping
-    public ProductResponse productBySku(@Argument String sku) {
-        return productService.getProductBySku(sku);
-    }
-
-    @QueryMapping
     public PageResponse<ProductResponse> products(@Argument int page, @Argument int size) {
         return productService.getAllProducts(page, size);
     }
@@ -117,7 +112,6 @@ public class ProductResolver {
         return CreateProductRequest.builder()
                 .categoryId(input.get("categoryId") != null
                         ? UUID.fromString((String) input.get("categoryId")) : null)
-                .sku((String) input.get("sku"))
                 .name((String) input.get("name"))
                 .description((String) input.get("description"))
                 .price(input.get("price") != null

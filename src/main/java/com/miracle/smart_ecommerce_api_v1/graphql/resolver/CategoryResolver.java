@@ -37,20 +37,6 @@ public class CategoryResolver {
         return categoryService.getAllCategories();
     }
 
-    @QueryMapping
-    public List<CategoryResponse> rootCategories() {
-        return categoryService.getRootCategories();
-    }
-
-    @QueryMapping
-    public List<CategoryResponse> categoryTree() {
-        return categoryService.getCategoryTree();
-    }
-
-    @QueryMapping
-    public List<CategoryResponse> subcategories(@Argument UUID parentId) {
-        return categoryService.getSubcategories(parentId);
-    }
 
     // ========================================================================
     // CATEGORY MUTATIONS
@@ -59,8 +45,6 @@ public class CategoryResolver {
     @MutationMapping
     public CategoryResponse createCategory(@Argument Map<String, Object> input) {
         CreateCategoryRequest request = CreateCategoryRequest.builder()
-                .parentCategoryId(input.get("parentCategoryId") != null
-                        ? UUID.fromString((String) input.get("parentCategoryId")) : null)
                 .categoryName((String) input.get("categoryName"))
                 .build();
         return categoryService.createCategory(request);
@@ -69,8 +53,6 @@ public class CategoryResolver {
     @MutationMapping
     public CategoryResponse updateCategory(@Argument UUID id, @Argument Map<String, Object> input) {
         CreateCategoryRequest request = CreateCategoryRequest.builder()
-                .parentCategoryId(input.get("parentCategoryId") != null
-                        ? UUID.fromString((String) input.get("parentCategoryId")) : null)
                 .categoryName((String) input.get("categoryName"))
                 .build();
         return categoryService.updateCategory(id, request);

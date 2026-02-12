@@ -4,6 +4,7 @@ import jakarta.validation.constraints.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
 
+import java.time.OffsetDateTime;
 import java.util.UUID;
 import com.miracle.smart_ecommerce_api_v1.domain.BaseModel;
 import org.springframework.stereotype.Component;
@@ -17,8 +18,11 @@ import org.springframework.stereotype.Component;
 @NoArgsConstructor
 @AllArgsConstructor
 @SuperBuilder
-@EqualsAndHashCode(callSuper = true)
-public class Address extends BaseModel {
+@EqualsAndHashCode(callSuper = false)
+public class Address {
+
+    @NotNull(message = "id is required")
+    private UUID id;
 
     @NotNull(message = "User ID is required")
     private UUID userId;
@@ -42,14 +46,13 @@ public class Address extends BaseModel {
     @Size(max = 20, message = "Postal code cannot exceed 20 characters")
     private String postalCode;
 
-    @Builder.Default
-    private Boolean isDefault = false;
 
     @Size(max = 20, message = "Address type cannot exceed 20 characters")
     private String addressType; // 'shipping', 'billing', or NULL for both
 
-    // Transient field for user object (populated when needed)
-    private transient User user;
+
+    @NotNull(message = "createdAt is required")
+    private OffsetDateTime createdAt;
 
     /**
      * Get formatted full address

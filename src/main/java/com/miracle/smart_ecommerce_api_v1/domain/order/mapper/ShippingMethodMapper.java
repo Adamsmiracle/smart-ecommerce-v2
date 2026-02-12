@@ -8,9 +8,6 @@ import org.springframework.stereotype.Component;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 
-/**
- * RowMapper for ShippingMethod domain model.
- */
 @Component
 public class ShippingMethodMapper implements RowMapper<ShippingMethod> {
 
@@ -21,8 +18,8 @@ public class ShippingMethodMapper implements RowMapper<ShippingMethod> {
                 .name(rs.getString("name"))
                 .description(rs.getString("description"))
                 .price(rs.getBigDecimal("price"))
-                .estimatedDays(JdbcUtils.getInteger(rs, "estimated_days"))
-                .isActive(JdbcUtils.getBoolean(rs, "is_active"))
+                .estimatedDays(rs.getObject("estimated_days") == null ? null : rs.getInt("estimated_days"))
+                .createdAt(JdbcUtils.getOffsetDateTime(rs, "created_at"))
                 .build();
     }
 }

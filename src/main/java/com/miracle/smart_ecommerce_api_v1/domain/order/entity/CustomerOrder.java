@@ -1,7 +1,6 @@
 package com.miracle.smart_ecommerce_api_v1.domain.order.entity;
 
 import com.miracle.smart_ecommerce_api_v1.domain.BaseModel;
-import com.miracle.smart_ecommerce_api_v1.domain.user.entity.Address;
 import com.miracle.smart_ecommerce_api_v1.domain.user.entity.User;
 import jakarta.validation.constraints.*;
 import lombok.*;
@@ -42,31 +41,19 @@ public class CustomerOrder extends BaseModel {
     @Builder.Default
     private String paymentStatus = PaymentStatus.PENDING.name().toLowerCase();
 
-    private UUID shippingAddressId;
-
     private UUID shippingMethodId;
 
     @NotNull(message = "Subtotal is required")
     @DecimalMin(value = "0.00", message = "Subtotal must be non-negative")
     private BigDecimal subtotal;
 
-    @DecimalMin(value = "0.00", message = "Shipping cost must be non-negative")
-    @Builder.Default
-    private BigDecimal shippingCost = BigDecimal.ZERO;
-
     @NotNull(message = "Total is required")
     @DecimalMin(value = "0.00", message = "Total must be non-negative")
     private BigDecimal total;
 
-    private OffsetDateTime cancelledAt;
-
-    @Size(max = 1000, message = "Customer notes cannot exceed 1000 characters")
-    private String customerNotes;
-
     // Transient fields for relationships (populated when needed)
     private transient User user;
     private transient PaymentMethod paymentMethod;
-    private transient Address shippingAddress;
     private transient ShippingMethod shippingMethod;
 
     @Builder.Default
@@ -103,7 +90,7 @@ public class CustomerOrder extends BaseModel {
     public void calculateTotals() {
         if (orderItems == null || orderItems.isEmpty()) {
             this.subtotal = BigDecimal.ZERO;
-            this.total = shippingCost != null ? shippingCost : BigDecimal.ZERO;
+            this.total = BigDecimal.ZERO;
             return;
         }
 
@@ -111,7 +98,7 @@ public class CustomerOrder extends BaseModel {
                 .map(OrderItem::getTotalPrice)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        this.total = subtotal.add(shippingCost != null ? shippingCost : BigDecimal.ZERO);
+        this.total = subtotal;
     }
 
     /**
@@ -131,31 +118,6 @@ public class CustomerOrder extends BaseModel {
         return OrderStatus.PENDING.name().equalsIgnoreCase(status) ||
                OrderStatus.CONFIRMED.name().equalsIgnoreCase(status) ||
                OrderStatus.PROCESSING.name().equalsIgnoreCase(status);
-    }
-
-    /**
-     * Cancel order
-     */
-    public void cancel() {
-        if (!canBeCancelled()) {
-            throw new IllegalStateException("Order cannot be cancelled in current status: " + status);
-        }
-        this.status = OrderStatus.CANCELLED.name().toLowerCase();
-        this.cancelledAt = OffsetDateTime.now();
-    }
-
-    /**
-     * Check if order is completed
-     */
-    public boolean isCompleted() {
-        return OrderStatus.DELIVERED.name().equalsIgnoreCase(status);
-    }
-
-    /**
-     * Check if order is paid
-     */
-    public boolean isPaid() {
-        return PaymentStatus.PAID.name().equalsIgnoreCase(paymentStatus);
     }
 
     /**
@@ -184,4 +146,3 @@ public class CustomerOrder extends BaseModel {
         PARTIALLY_REFUNDED
     }
 }
-

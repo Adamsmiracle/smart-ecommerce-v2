@@ -6,6 +6,8 @@ import lombok.*;
 import lombok.experimental.SuperBuilder;
 
 import java.math.BigDecimal;
+import java.time.OffsetDateTime;
+import java.util.UUID;
 
 /**
  * Shipping Method domain model (POJO) - represents shipping_method table.
@@ -15,8 +17,11 @@ import java.math.BigDecimal;
 @NoArgsConstructor
 @AllArgsConstructor
 @SuperBuilder
-@EqualsAndHashCode(callSuper = true)
-public class ShippingMethod extends BaseModel {
+@EqualsAndHashCode(callSuper = false)
+public class ShippingMethod {
+
+    @NotNull(message = "id is required")
+    private UUID id;
 
     @NotBlank(message = "Shipping method name is required")
     @Size(max = 100, message = "Name cannot exceed 100 characters")
@@ -32,8 +37,7 @@ public class ShippingMethod extends BaseModel {
     @Min(value = 0, message = "Estimated days cannot be negative")
     private Integer estimatedDays;
 
-    @Builder.Default
-    private Boolean isActive = true;
+    private OffsetDateTime createdAt;
 
     /**
      * Get formatted estimated delivery

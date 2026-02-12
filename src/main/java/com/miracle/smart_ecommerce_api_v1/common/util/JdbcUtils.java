@@ -7,6 +7,7 @@ import java.sql.Timestamp;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.ZoneId;
+import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -37,11 +38,23 @@ public final class JdbcUtils {
     }
 
     /**
-     * Get OffsetDateTime from ResultSet, handling null values
+     * Get OffsetDateTime from ResultSet, handling null values.
+     * Always returns an OffsetDateTime in UTC when a TIMESTAMP is present.
      */
     public static OffsetDateTime getLocalDateTime(ResultSet rs, String columnName) throws SQLException {
         Timestamp timestamp = rs.getTimestamp(columnName);
-        return timestamp != null ? timestamp.toLocalDateTime().atZone(ZoneId.systemDefault()).toOffsetDateTime() : null;
+        if (timestamp == null) {
+            return null;
+        }
+        // Use Instant -> UTC offset to avoid LocalDateTime/Zone issues
+        return timestamp.toInstant().atOffset(ZoneOffset.UTC);
+    }
+
+    /**
+     * Alias for getLocalDateTime to make intent explicit (return OffsetDateTime)
+     */
+    public static OffsetDateTime getOffsetDateTime(ResultSet rs, String columnName) throws SQLException {
+        return getLocalDateTime(rs, columnName);
     }
 
     /**

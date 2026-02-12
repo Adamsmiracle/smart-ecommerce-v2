@@ -13,7 +13,7 @@ public class ServiceLoggingAspect {
 
     private static final Logger log = LoggerFactory.getLogger(ServiceLoggingAspect.class);
 
-    @Pointcut("within(com.miracle.smart_ecommerce..service..*)")
+    @Pointcut("within(com.miracle.smart_ecommerce_api_v1..service..*)")
     public void serviceLayer() {}
 
     @Before("serviceLayer()")

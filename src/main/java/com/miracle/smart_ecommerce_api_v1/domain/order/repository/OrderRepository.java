@@ -1,6 +1,7 @@
 package com.miracle.smart_ecommerce_api_v1.domain.order.repository;
 
 import com.miracle.smart_ecommerce_api_v1.domain.order.entity.CustomerOrder;
+import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
@@ -54,15 +55,7 @@ public interface OrderRepository {
      */
     List<CustomerOrder> findByStatus(String status, int page, int size);
 
-    /**
-     * Find orders by user ID and status
-     */
-    List<CustomerOrder> findByUserIdAndStatus(UUID userId, String status, int page, int size);
 
-    /**
-     * Find orders in date range
-     */
-    List<CustomerOrder> findByDateRange(LocalDateTime startDate, LocalDateTime endDate, int page, int size);
 
     /**
      * Delete order by ID

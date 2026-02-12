@@ -1,8 +1,8 @@
 package com.miracle.smart_ecommerce_api_v1.graphql.resolver;
 
-import com.miracle.smart_ecommerce_api_v1.domain.order.service.cart.dto.AddToCartRequest;
-import com.miracle.smart_ecommerce_api_v1.domain.order.service.cart.dto.CartResponse;
-import com.miracle.smart_ecommerce_api_v1.domain.order.service.cart.service.CartService;
+import com.miracle.smart_ecommerce_api_v1.domain.cart.dto.AddToCartRequest;
+import com.miracle.smart_ecommerce_api_v1.domain.cart.dto.CartResponse;
+import com.miracle.smart_ecommerce_api_v1.domain.cart.service.CartService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.graphql.data.method.annotation.Argument;
 import org.springframework.graphql.data.method.annotation.MutationMapping;

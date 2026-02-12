@@ -3,7 +3,7 @@ package com.miracle.smart_ecommerce_api_v1.domain.user.controller;
 import com.miracle.smart_ecommerce_api_v1.common.response.ApiResponse;
 import com.miracle.smart_ecommerce_api_v1.common.response.PageResponse;
 import com.miracle.smart_ecommerce_api_v1.domain.user.dto.request.CreateUserRequest;
-import com.miracle.smart_ecommerce_api_v1.domain.user.dto.request.UpdateRolesRequest;
+import com.miracle.smart_ecommerce_api_v1.domain.user.dto.request.UpdateUserRequest;
 import com.miracle.smart_ecommerce_api_v1.domain.user.dto.response.UserResponse;
 import com.miracle.smart_ecommerce_api_v1.domain.user.service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -13,7 +13,6 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
@@ -88,7 +87,7 @@ public class UserController {
     @Operation(summary = "Update user", description = "Updates an existing user")
     public ResponseEntity<ApiResponse<UserResponse>> updateUser(
             @Parameter(description = "User ID") @PathVariable UUID id,
-            @Valid @RequestBody CreateUserRequest request) {
+            @Valid @RequestBody UpdateUserRequest request) {
         UserResponse user = userService.updateUser(id, request);
         return ResponseEntity.ok(ApiResponse.success(user, "User updated successfully"));
     }
@@ -117,14 +116,12 @@ public class UserController {
         return ResponseEntity.ok(ApiResponse.success("User deactivated successfully"));
     }
 
-    @PreAuthorize("hasRole('ADMIN')")
-    @PatchMapping("/{id}/roles")
-    @Operation(summary = "Update user roles", description = "Admin: update roles for a user")
-    public ResponseEntity<ApiResponse<Void>> updateRoles(
-            @Parameter(description = "User ID") @PathVariable UUID id,
-            @Valid @RequestBody UpdateRolesRequest request) {
-        userService.updateUserRoles(id, request.getRoles());
-        return ResponseEntity.ok(ApiResponse.success("User roles updated successfully"));
-    }
+//    @PatchMapping("/{id}/roles")
+//    @Operation(summary = "Update user roles", description = "Admin: update roles for a user")
+//    public ResponseEntity<ApiResponse<Void>> updateRoles(
+//            @Parameter(description = "User ID") @PathVariable UUID id,
+//            @Valid @RequestBody UpdateRolesRequest request) {
+//        userService.updateUserRoles(id, request.getRoles());
+//        return ResponseEntity.ok(ApiResponse.success("User roles updated successfully"));
+//    }
 }
-

@@ -37,11 +37,6 @@ public interface AddressService {
     List<AddressResponse> getAddressesByUserIdAndType(UUID userId, String addressType);
 
     /**
-     * Get user's default address
-     */
-    AddressResponse getDefaultAddress(UUID userId);
-
-    /**
      * Update an address
      */
     AddressResponse updateAddress(UUID id, CreateAddressRequest request);

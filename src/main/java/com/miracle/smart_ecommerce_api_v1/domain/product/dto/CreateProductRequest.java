@@ -22,9 +22,6 @@ public class CreateProductRequest {
     @NotNull(message = "Category ID is required")
     private UUID categoryId;
 
-    @Size(max = 50, message = "SKU cannot exceed 50 characters")
-    private String sku;
-
     @NotBlank(message = "Product name is required")
     @Size(min = 2, max = 255, message = "Product name must be between 2 and 255 characters")
     private String name;
@@ -44,4 +41,3 @@ public class CreateProductRequest {
 
     private List<String> images;
 }
-

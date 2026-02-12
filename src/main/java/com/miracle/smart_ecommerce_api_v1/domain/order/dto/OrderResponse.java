@@ -25,6 +25,8 @@ public class OrderResponse {
     private String orderNumber;
     private String status;
     private String paymentStatus;
+    private UUID paymentMethodId;
+    private UUID shippingMethodId;
     private BigDecimal subtotal;
     private BigDecimal shippingCost;
     private BigDecimal total;
@@ -47,7 +49,6 @@ public class OrderResponse {
         private UUID id;
         private UUID productId;
         private String productName;
-        private String productSku;
         private BigDecimal unitPrice;
         private Integer quantity;
         private BigDecimal totalPrice;
@@ -84,4 +85,3 @@ public class OrderResponse {
         private String estimatedDelivery;
     }
 }
-

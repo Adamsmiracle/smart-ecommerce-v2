@@ -1,219 +1,222 @@
--- ============================================================================
--- Smart E-Commerce System - Database Schema (FIXED)
--- PostgreSQL Schema for raw JDBC + GraphQL
--- Timezone-safe (TIMESTAMPTZ everywhere)
--- ============================================================================
-
 -- Enable UUID extension
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
--- ============================================================================
--- USER MANAGEMENT
--- ============================================================================
+-- =======================
+-- Users
+-- =======================
+CREATE TABLE app_user (
+          id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+          email_address VARCHAR(255) NOT NULL UNIQUE,
+          first_name VARCHAR(100),
+          last_name VARCHAR(100),
+          phone_number VARCHAR(20),
+          password_hash VARCHAR(255) NOT NULL,
+          is_active BOOLEAN NOT NULL DEFAULT TRUE,
+          created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+          updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
+          roles VARCHAR(50)
+);
 
-CREATE TABLE IF NOT EXISTS app_user (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    email_address VARCHAR(255) NOT NULL UNIQUE,
-    first_name VARCHAR(100),
-    last_name VARCHAR(100),
-    phone_number VARCHAR(20),
-    password_hash VARCHAR(255),
-    is_active BOOLEAN DEFAULT TRUE,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    roles JSONB DEFAULT '["ROLE_USER"]'
-    );
+-- =======================
+-- Addresses
+-- =======================
+CREATE TABLE address (
+         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+         user_id UUID NOT NULL REFERENCES app_user(id) ON DELETE CASCADE,
+         address_line VARCHAR(255),
+         city VARCHAR(100),
+         region VARCHAR(100),
+         country VARCHAR(100),
+         postal_code VARCHAR(20),
+         address_type VARCHAR(50),
+         created_at TIMESTAMP DEFAULT NOW()
+);
 
-CREATE INDEX IF NOT EXISTS idx_app_user_email ON app_user(email_address);
-CREATE INDEX IF NOT EXISTS idx_app_user_active ON app_user(is_active);
+-- =======================
+-- Product Categories
+-- =======================
+CREATE TABLE product_category (
+          id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+          category_name VARCHAR(100) NOT NULL UNIQUE,
+          created_at TIMESTAMP NOT NULL DEFAULT NOW()
+);
 
--- Address table
-CREATE TABLE IF NOT EXISTS address (
-                                       id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    user_id UUID NOT NULL REFERENCES app_user(id) ON DELETE CASCADE,
-    address_line VARCHAR(500),
-    city VARCHAR(100) NOT NULL,
-    region VARCHAR(100),
-    country VARCHAR(100) NOT NULL,
-    postal_code VARCHAR(20),
-    is_default BOOLEAN DEFAULT FALSE,
-    address_type VARCHAR(20) DEFAULT 'shipping',
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-    );
+-- =======================
+-- Products
+-- =======================
+CREATE TABLE product (
+             id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+             category_id UUID NOT NULL
+                 REFERENCES product_category(id) ON DELETE RESTRICT,
+             name VARCHAR(255) NOT NULL,
+             description TEXT,
+             price NUMERIC(10, 2) NOT NULL,
+             stock_quantity INT NOT NULL DEFAULT 0,
+             is_active BOOLEAN DEFAULT TRUE,
+             images JSONB DEFAULT '[]',
+             created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+             updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+);
 
-CREATE INDEX IF NOT EXISTS idx_address_user ON address(user_id);
+-- =======================
+-- Product Reviews
+-- =======================
+CREATE TABLE product_review (
+            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+            user_id UUID NOT NULL
+                REFERENCES app_user(id) ON DELETE CASCADE,
+            product_id UUID NOT NULL
+                REFERENCES product(id) ON DELETE CASCADE,
+            rating INT NOT NULL CHECK (rating >= 1 AND rating <= 5),
+            comment TEXT,
+            created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+            updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+);
 
--- ============================================================================
--- PRODUCT CATALOG
--- ============================================================================
+-- =======================
+-- Shopping Cart
+-- =======================
+CREATE TABLE shopping_cart (
+           id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+           user_id UUID NOT NULL
+               REFERENCES app_user(id) ON DELETE CASCADE,
+           created_at TIMESTAMP DEFAULT NOW()
+);
 
-CREATE TABLE IF NOT EXISTS product_category (
-                                                id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    parent_category_id UUID REFERENCES product_category(id) ON DELETE SET NULL,
-    category_name VARCHAR(100) NOT NULL UNIQUE
-    );
+-- =======================
+-- Cart Items
+-- =======================
+CREATE TABLE cart_item (
+           id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+           cart_id UUID NOT NULL
+               REFERENCES shopping_cart(id) ON DELETE CASCADE,
+           product_id UUID NOT NULL
+               REFERENCES product(id) ON DELETE CASCADE,
+           quantity INT NOT NULL DEFAULT 1
+);
 
-CREATE INDEX IF NOT EXISTS idx_category_parent ON product_category(parent_category_id);
+-- =======================
+-- Payment Methods
+-- =======================
+CREATE TABLE payment_method (
+            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+            user_id UUID NOT NULL
+                REFERENCES app_user(id) ON DELETE CASCADE,
+            payment_type VARCHAR(50),
+            provider VARCHAR(100),
+            account_number VARCHAR(100),
+            expiry_date TIMESTAMP,
+            created_at TIMESTAMP NOT NULL DEFAULT NOW()
+);
 
-CREATE TABLE IF NOT EXISTS product (
-                                       id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    category_id UUID NOT NULL REFERENCES product_category(id) ON DELETE RESTRICT,
-    sku VARCHAR(50) UNIQUE,
-    name VARCHAR(255) NOT NULL,
-    description TEXT,
-    price DECIMAL(12, 2) NOT NULL,
-    stock_quantity INTEGER DEFAULT 1,
-    is_active BOOLEAN DEFAULT TRUE,
-    images JSONB DEFAULT '[]',
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-    );
+-- =======================
+-- Shipping Methods
+-- =======================
+CREATE TABLE shipping_method (
+             id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+             name VARCHAR(100) NOT NULL,
+             description TEXT,
+             price NUMERIC(10, 2),
+             estimated_days INT,
+             created_at TIMESTAMP DEFAULT NOW()
+);
 
-CREATE INDEX IF NOT EXISTS idx_product_category ON product(category_id);
-CREATE INDEX IF NOT EXISTS idx_product_sku ON product(sku);
-CREATE INDEX IF NOT EXISTS idx_product_name ON product(name);
-CREATE INDEX IF NOT EXISTS idx_product_active ON product(is_active);
-CREATE INDEX IF NOT EXISTS idx_product_price ON product(price);
+-- =======================
+-- Customer Orders
+-- =======================
+CREATE TABLE customer_order (
+            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+            user_id UUID NOT NULL
+                REFERENCES app_user(id) ON DELETE CASCADE,
+            order_number VARCHAR(50) UNIQUE NOT NULL,
+            status VARCHAR(50) DEFAULT 'pending',
 
--- ============================================================================
--- PRODUCT REVIEWS
--- ============================================================================
+            payment_method_id UUID
+                REFERENCES payment_method(id) ON DELETE SET NULL,
 
-CREATE TABLE IF NOT EXISTS product_review (
-                                              id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    user_id UUID NOT NULL REFERENCES app_user(id) ON DELETE CASCADE,
-    product_id UUID NOT NULL REFERENCES product(id) ON DELETE CASCADE,
-    order_item_id UUID,
-    rating INTEGER NOT NULL CHECK (rating BETWEEN 1 AND 5),
-    title VARCHAR(200),
-    comment TEXT,
-    is_verified_purchase BOOLEAN DEFAULT FALSE,
-    is_approved BOOLEAN DEFAULT TRUE,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    UNIQUE(user_id, product_id)
-    );
+            shipping_method_id UUID
+                REFERENCES shipping_method(id) ON DELETE SET NULL,
 
-CREATE INDEX IF NOT EXISTS idx_review_product ON product_review(product_id);
-CREATE INDEX IF NOT EXISTS idx_review_user ON product_review(user_id);
-CREATE INDEX IF NOT EXISTS idx_review_rating ON product_review(rating);
+            payment_status VARCHAR(30),
+            subtotal NUMERIC(10, 2),
+            total_amount NUMERIC(10, 2),
+            created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+            updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+);
 
--- ============================================================================
+-- =======================
+-- Order Items
+-- =======================
+CREATE TABLE order_item (
+            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+            order_id UUID NOT NULL
+                REFERENCES customer_order(id) ON DELETE CASCADE,
+            product_id UUID NOT NULL
+                REFERENCES product(id) ON DELETE RESTRICT,
+            unit_price NUMERIC(10, 2) NOT NULL,
+            quantity INT NOT NULL DEFAULT 1
+);
+
+
+-- ============================
+-- ADDRESS
+-- ============================
+CREATE INDEX idx_address_user_id
+    ON address(user_id);
+
+-- ============================
+-- PRODUCT
+-- ============================
+CREATE INDEX idx_product_category_id
+    ON product(category_id);
+
+-- ============================
+-- PRODUCT REVIEW
+-- ============================
+CREATE INDEX idx_product_review_user_id
+    ON product_review(user_id);
+
+CREATE INDEX idx_product_review_product_id
+    ON product_review(product_id);
+
+-- ============================
 -- SHOPPING CART
--- ============================================================================
+-- ============================
+CREATE INDEX idx_shopping_cart_user_id
+    ON shopping_cart(user_id);
 
-CREATE TABLE IF NOT EXISTS shopping_cart (
-                                             id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    user_id UUID UNIQUE REFERENCES app_user(id) ON DELETE CASCADE,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-    );
+-- ============================
+-- CART ITEM
+-- ============================
+CREATE INDEX idx_cart_item_cart_id
+    ON cart_item(cart_id);
 
-CREATE INDEX IF NOT EXISTS idx_cart_user ON shopping_cart(user_id);
+CREATE INDEX idx_cart_item_product_id
+    ON cart_item(product_id);
 
-CREATE TABLE IF NOT EXISTS cart_item (
-                                         id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    cart_id UUID NOT NULL REFERENCES shopping_cart(id) ON DELETE CASCADE,
-    product_id UUID NOT NULL REFERENCES product(id) ON DELETE CASCADE,
-    quantity INTEGER NOT NULL CHECK (quantity > 0),
-    added_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    UNIQUE(cart_id, product_id)
-    );
+-- ============================
+-- PAYMENT METHOD
+-- ============================
+CREATE INDEX idx_payment_method_user_id
+    ON payment_method(user_id);
 
-CREATE INDEX IF NOT EXISTS idx_cart_item_cart ON cart_item(cart_id);
-CREATE INDEX IF NOT EXISTS idx_cart_item_product ON cart_item(product_id);
+-- ============================
+-- CUSTOMER ORDER
+-- ============================
+CREATE INDEX idx_customer_order_user_id
+    ON customer_order(user_id);
 
--- ============================================================================
--- ORDERS
--- ============================================================================
+CREATE INDEX idx_customer_order_payment_method_id
+    ON customer_order(payment_method_id);
 
-CREATE TABLE IF NOT EXISTS shipping_method (
-                                               id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    name VARCHAR(100) NOT NULL,
-    description TEXT,
-    price DECIMAL(10, 2) NOT NULL,
-    estimated_days INTEGER,
-    is_active BOOLEAN DEFAULT TRUE
-    );
+CREATE INDEX idx_customer_order_shipping_method_id
+    ON customer_order(shipping_method_id);
 
-CREATE TABLE IF NOT EXISTS payment_method (
-                                              id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    user_id UUID NOT NULL REFERENCES app_user(id) ON DELETE CASCADE,
-    payment_type VARCHAR(50) NOT NULL,
-    provider VARCHAR(100),
-    account_number VARCHAR(255) NOT NULL,
-    expiry_date DATE,
-    is_default BOOLEAN DEFAULT FALSE,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-    );
+-- ============================
+-- ORDER ITEM
+-- ============================
+CREATE INDEX idx_order_item_order_id
+    ON order_item(order_id);
 
-CREATE INDEX IF NOT EXISTS idx_payment_method_user ON payment_method(user_id);
-
-CREATE TABLE IF NOT EXISTS customer_order (
-                                              id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    user_id UUID NOT NULL REFERENCES app_user(id) ON DELETE RESTRICT,
-    order_number VARCHAR(50) NOT NULL UNIQUE,
-    status VARCHAR(30) DEFAULT 'pending',
-    payment_method_id UUID REFERENCES payment_method(id) ON DELETE SET NULL,
-    payment_status VARCHAR(30) DEFAULT 'pending',
-    shipping_address_id UUID REFERENCES address(id) ON DELETE SET NULL,
-    shipping_method_id UUID REFERENCES shipping_method(id) ON DELETE SET NULL,
-    subtotal DECIMAL(12, 2) NOT NULL,
-    shipping_cost DECIMAL(10, 2) DEFAULT 0,
-    total DECIMAL(12, 2) NOT NULL,
-    customer_notes TEXT,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    cancelled_at TIMESTAMPTZ
-    );
-
-CREATE INDEX IF NOT EXISTS idx_order_user ON customer_order(user_id);
-CREATE INDEX IF NOT EXISTS idx_order_number ON customer_order(order_number);
-CREATE INDEX IF NOT EXISTS idx_order_status ON customer_order(status);
-CREATE INDEX IF NOT EXISTS idx_order_created ON customer_order(created_at);
-
-CREATE TABLE IF NOT EXISTS order_item (
-                                          id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    order_id UUID NOT NULL REFERENCES customer_order(id) ON DELETE CASCADE,
-    product_id UUID NOT NULL REFERENCES product(id) ON DELETE RESTRICT,
-    product_name VARCHAR(255) NOT NULL,
-    product_sku VARCHAR(50),
-    unit_price DECIMAL(12, 2) NOT NULL,
-    quantity INTEGER NOT NULL CHECK (quantity > 0),
-    total_price DECIMAL(12, 2) NOT NULL
-    );
-
-CREATE INDEX IF NOT EXISTS idx_order_item_order ON order_item(order_id);
-CREATE INDEX IF NOT EXISTS idx_order_item_product ON order_item(product_id);
-
--- ============================================================================
--- WISHLIST
--- ============================================================================
-
-CREATE TABLE IF NOT EXISTS wishlist_item (
-                                             id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    user_id UUID NOT NULL REFERENCES app_user(id) ON DELETE CASCADE,
-    product_id UUID NOT NULL REFERENCES product(id) ON DELETE CASCADE,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    UNIQUE(user_id, product_id)
-    );
-
-CREATE INDEX IF NOT EXISTS idx_wishlist_user ON wishlist_item(user_id);
-
--- ============================================================================
--- SAMPLE DATA
--- ============================================================================
-
-INSERT INTO product_category (id, parent_category_id, category_name) VALUES
-                                                                         ('11111111-1111-1111-1111-111111111111', NULL, 'Electronics'),
-                                                                         ('22222222-2222-2222-2222-222222222222', NULL, 'Clothing'),
-                                                                         ('33333333-3333-3333-3333-333333333333', NULL, 'Home & Garden'),
-                                                                         ('44444444-4444-4444-4444-444444444444', '11111111-1111-1111-1111-111111111111', 'Smartphones'),
-                                                                         ('55555555-5555-5555-5555-555555555555', '11111111-1111-1111-1111-111111111111', 'Laptops'),
-                                                                         ('66666666-6666-6666-6666-666666666666', '22222222-2222-2222-2222-222222222222', 'Men'),
-                                                                         ('77777777-7777-7777-7777-777777777777', '22222222-2222-2222-2222-222222222222', 'Women')
-    ON CONFLICT (id) DO NOTHING;
-
-INSERT INTO shipping_method (id, name, description, price, estimated_days, is_active) VALUES
-                                                                                          ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'Standard Shipping', 'Delivery in 5-7 business days', 5.99, 7, TRUE),
-                                                                                          ('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', 'Express Shipping', 'Delivery in 2-3 business days', 12.99, 3, TRUE),
-                                                                                          ('cccccccc-cccc-cccc-cccc-cccccccccccc', 'Next Day Delivery', 'Delivery next business day', 24.99, 1, TRUE)
-    ON CONFLICT (id) DO NOTHING;
+CREATE INDEX idx_order_item_product_id
+    ON order_item(product_id);

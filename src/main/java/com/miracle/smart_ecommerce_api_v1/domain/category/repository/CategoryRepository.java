@@ -38,11 +38,6 @@ public interface CategoryRepository {
     List<Category> findAll();
 
     /**
-     * Find root categories (no parent)
-     */
-    List<Category> findRootCategories();
-
-    /**
      * Find subcategories by parent ID
      */
     List<Category> findByParentId(UUID parentId);
@@ -67,9 +62,5 @@ public interface CategoryRepository {
      */
     long count();
 
-    /**
-     * Count subcategories
-     */
-    long countByParentId(UUID parentId);
 }
 

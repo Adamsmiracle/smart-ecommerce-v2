@@ -1,7 +1,5 @@
 package com.miracle.smart_ecommerce_api_v1.domain.order.service;
 
-import java.time.OffsetDateTime;
-
 import com.miracle.smart_ecommerce_api_v1.common.response.PageResponse;
 import com.miracle.smart_ecommerce_api_v1.domain.order.entity.CustomerOrder;
 import com.miracle.smart_ecommerce_api_v1.domain.order.entity.CustomerOrder.OrderStatus;
@@ -11,12 +9,10 @@ import com.miracle.smart_ecommerce_api_v1.domain.order.repository.OrderItemRepos
 import com.miracle.smart_ecommerce_api_v1.domain.order.repository.OrderRepository;
 import com.miracle.smart_ecommerce_api_v1.domain.product.entity.Product;
 import com.miracle.smart_ecommerce_api_v1.domain.product.repository.ProductRepository;
-import com.miracle.smart_ecommerce_api_v1.domain.user.entity.Address;
 import com.miracle.smart_ecommerce_api_v1.domain.user.entity.User;
 import com.miracle.smart_ecommerce_api_v1.domain.order.dto.CreateOrderRequest;
 import com.miracle.smart_ecommerce_api_v1.domain.order.dto.OrderResponse;
 import com.miracle.smart_ecommerce_api_v1.domain.order.dto.UpdateOrderRequest;
-import com.miracle.smart_ecommerce_api_v1.domain.user.repository.AddressRepository;
 import com.miracle.smart_ecommerce_api_v1.domain.user.repository.UserRepository;
 import com.miracle.smart_ecommerce_api_v1.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
@@ -28,7 +24,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -48,7 +43,6 @@ public class OrderServiceImpl implements OrderService {
     private final OrderItemRepository orderItemRepository;
     private final UserRepository userRepository;
     private final ProductRepository productRepository;
-    private final AddressRepository addressRepository;
     private final CacheManager cacheManager;
 
     @Override
@@ -82,21 +76,15 @@ public class OrderServiceImpl implements OrderService {
 
             OrderItem orderItem = OrderItem.builder()
                     .productId(itemRequest.getProductId())
-                    .productName(product.getName())
-                    .productSku(product.getSku())
                     .unitPrice(unitPrice)
                     .quantity(itemRequest.getQuantity())
-                    .totalPrice(totalPrice)
                     .build();
 
             orderItems.add(orderItem);
         }
 
-        // Get shipping cost (default to 0 if no shipping method)
-        BigDecimal shippingCost = BigDecimal.ZERO;
-        // TODO: Get actual shipping cost from shipping method if provided
-
-        BigDecimal total = subtotal.add(shippingCost);
+        // Total equals subtotal (no shipping cost field in schema)
+        BigDecimal total = subtotal;
 
         // Create order
         CustomerOrder order = CustomerOrder.builder()
@@ -105,12 +93,9 @@ public class OrderServiceImpl implements OrderService {
                 .status(OrderStatus.PENDING.name().toLowerCase())
                 .paymentStatus(PaymentStatus.PENDING.name().toLowerCase())
                 .paymentMethodId(request.getPaymentMethodId())
-                .shippingAddressId(request.getShippingAddressId())
                 .shippingMethodId(request.getShippingMethodId())
                 .subtotal(subtotal)
-                .shippingCost(shippingCost)
                 .total(total)
-                .customerNotes(request.getCustomerNotes())
                 .build();
 
         CustomerOrder savedOrder = orderRepository.save(order);
@@ -130,12 +115,6 @@ public class OrderServiceImpl implements OrderService {
         // Load items for response
         savedOrder.setOrderItems(orderItemRepository.findByOrderId(savedOrder.getId()));
         savedOrder.setUser(user);
-
-        // Load shipping address if present
-        if (savedOrder.getShippingAddressId() != null) {
-            addressRepository.findById(savedOrder.getShippingAddressId())
-                    .ifPresent(savedOrder::setShippingAddress);
-        }
 
         OrderResponse response = mapToResponse(savedOrder);
 
@@ -330,7 +309,6 @@ public class OrderServiceImpl implements OrderService {
         // Refresh order
         order = orderRepository.findById(id)
                 .orElseThrow(() -> ResourceNotFoundException.forResource("Order", id));
-        order.setCancelledAt(OffsetDateTime.now());
 
         log.info("Order cancelled successfully: {}", id);
         OrderResponse response = mapToResponseWithDetails(order);
@@ -405,15 +383,14 @@ public class OrderServiceImpl implements OrderService {
                 .orderNumber(order.getOrderNumber())
                 .status(order.getStatus())
                 .paymentStatus(order.getPaymentStatus())
+                .paymentMethodId(order.getPaymentMethodId())
+                .shippingMethodId(order.getShippingMethodId())
                 .subtotal(order.getSubtotal())
-                .shippingCost(order.getShippingCost())
                 .total(order.getTotal())
                 .itemCount(order.getItemCount())
-                .customerNotes(order.getCustomerNotes())
-                .createdAt(OffsetDateTime.from(order.getCreatedAt()))
-                .cancelledAt(order.getCancelledAt())
+                .createdAt(order.getCreatedAt())
                 .items(mapOrderItems(order.getOrderItems()))
-                .shippingAddress(mapShippingAddress(order.getShippingAddress()))
+                .shippingMethod(mapShippingMethod(order.getShippingMethod()))
                 .build();
     }
 
@@ -425,10 +402,10 @@ public class OrderServiceImpl implements OrderService {
         // Load user
         userRepository.findById(order.getUserId()).ifPresent(order::setUser);
 
-        // Load shipping address
-        if (order.getShippingAddressId() != null) {
-            addressRepository.findById(order.getShippingAddressId())
-                    .ifPresent(order::setShippingAddress);
+        // Load shipping method
+        if (order.getShippingMethodId() != null) {
+            // shipping method loader not implemented fully; keep transient if available
+            // shipping method may be loaded elsewhere
         }
 
         return mapToResponse(order);
@@ -439,47 +416,29 @@ public class OrderServiceImpl implements OrderService {
             return new ArrayList<>();
         }
         return items.stream()
-                .map(item -> OrderResponse.OrderItemResponse.builder()
-                        .id(item.getId())
-                        .productId(item.getProductId())
-                        .productName(item.getProductName())
-                        .productSku(item.getProductSku())
-                        .unitPrice(item.getUnitPrice())
-                        .quantity(item.getQuantity())
-                        .totalPrice(item.getTotalPrice())
-                        .build())
+                .map(item -> {
+                    // Fetch product details for name/sku
+                    Product product = productRepository.findById(item.getProductId()).orElse(null);
+                    return OrderResponse.OrderItemResponse.builder()
+                            .id(item.getId())
+                            .productId(item.getProductId())
+                            .productName(product != null ? product.getName() : null)
+                            .unitPrice(item.getUnitPrice())
+                            .quantity(item.getQuantity())
+                            .totalPrice(item.getTotalPrice())
+                            .build();
+                })
                 .collect(Collectors.toList());
     }
 
-    private OrderResponse.ShippingAddressResponse mapShippingAddress(Address address) {
-        if (address == null) {
-            return null;
-        }
-        return OrderResponse.ShippingAddressResponse.builder()
-                .id(address.getId())
-                .addressLine(address.getAddressLine())
-                .city(address.getCity())
-                .region(address.getRegion())
-                .country(address.getCountry())
-                .postalCode(address.getPostalCode())
-                .fullAddress(buildFullAddress(address))
+    private OrderResponse.ShippingMethodResponse mapShippingMethod(com.miracle.smart_ecommerce_api_v1.domain.order.entity.ShippingMethod shippingMethod) {
+        if (shippingMethod == null) return null;
+        return OrderResponse.ShippingMethodResponse.builder()
+                .id(shippingMethod.getId())
+                .name(shippingMethod.getName())
+                .price(shippingMethod.getPrice())
+                .estimatedDelivery(shippingMethod.getEstimatedDays() != null ? shippingMethod.getEstimatedDays() + " days" : null)
                 .build();
-    }
-
-    private String buildFullAddress(Address address) {
-        StringBuilder sb = new StringBuilder();
-        if (address.getAddressLine() != null && !address.getAddressLine().isEmpty()) {
-            sb.append(address.getAddressLine()).append(", ");
-        }
-        sb.append(address.getCity());
-        if (address.getRegion() != null && !address.getRegion().isEmpty()) {
-            sb.append(", ").append(address.getRegion());
-        }
-        if (address.getPostalCode() != null && !address.getPostalCode().isEmpty()) {
-            sb.append(" ").append(address.getPostalCode());
-        }
-        sb.append(", ").append(address.getCountry());
-        return sb.toString();
     }
 
     private void validateStatusTransition(String currentStatus, String newStatus) {
@@ -534,17 +493,8 @@ public class OrderServiceImpl implements OrderService {
             order.setPaymentMethodId(request.getPaymentMethodId());
             changed = true;
         }
-        if (request.getShippingAddressId() != null && !request.getShippingAddressId().equals(order.getShippingAddressId())) {
-            // verify address belongs to user? optional
-            order.setShippingAddressId(request.getShippingAddressId());
-            changed = true;
-        }
         if (request.getShippingMethodId() != null && !request.getShippingMethodId().equals(order.getShippingMethodId())) {
             order.setShippingMethodId(request.getShippingMethodId());
-            changed = true;
-        }
-        if (request.getCustomerNotes() != null && !request.getCustomerNotes().equals(order.getCustomerNotes())) {
-            order.setCustomerNotes(request.getCustomerNotes());
             changed = true;
         }
 
@@ -558,10 +508,8 @@ public class OrderServiceImpl implements OrderService {
                     .filter(it -> it.getId() != null)
                     .collect(Collectors.toMap(OrderItem::getId, it -> it));
 
-            // We'll build new list of items to persist/keep
             List<OrderItem> resultingItems = new ArrayList<>();
 
-            // Track stock changes: productId -> stockDelta (negative means reduce stock)
             java.util.Map<UUID, Integer> stockDeltas = new java.util.HashMap<>();
 
             for (UpdateOrderRequest.OrderItemUpdateRequest itemReq : request.getItems()) {
@@ -581,7 +529,6 @@ public class OrderServiceImpl implements OrderService {
                         // reduce stock by qtyDiff (can be negative to restore stock)
                         stockDeltas.merge(existing.getProductId(), -qtyDiff, Integer::sum);
                         existing.setQuantity(itemReq.getQuantity());
-                        existing.calculateTotalPrice();
                         changed = true;
                     }
                     resultingItems.add(existing);
@@ -634,7 +581,7 @@ public class OrderServiceImpl implements OrderService {
                     .map(OrderItem::getTotalPrice)
                     .reduce(BigDecimal.ZERO, BigDecimal::add);
             order.setSubtotal(newSubtotal);
-            order.setTotal(newSubtotal.add(order.getShippingCost() == null ? BigDecimal.ZERO : order.getShippingCost()));
+            order.setTotal(newSubtotal);
         }
 
         if (!changed) {
@@ -643,10 +590,10 @@ public class OrderServiceImpl implements OrderService {
         }
 
         // Persist order changes
-        CustomerOrder updated = orderRepository.update(order);
+        orderRepository.update(order);
 
         // Refresh and prepare response
-        updated = orderRepository.findById(id)
+        CustomerOrder updated = orderRepository.findById(id)
                 .orElseThrow(() -> ResourceNotFoundException.forResource("Order", id));
 
         OrderResponse response = mapToResponseWithDetails(updated);

@@ -21,7 +21,15 @@ public interface ReviewRepository {
 
     List<ProductReview> findByUserId(UUID userId, int page, int size);
 
-    Optional<ProductReview> findByUserIdAndProductId(UUID userId, UUID productId);
+    /**
+     * Find all reviews (paginated)
+     */
+    List<ProductReview> findAll(int page, int size);
+
+    /**
+     * Count all reviews
+     */
+    long countAll();
 
     Double getAverageRatingByProductId(UUID productId);
 
@@ -33,4 +41,3 @@ public interface ReviewRepository {
 
     void deleteById(UUID id);
 }
-

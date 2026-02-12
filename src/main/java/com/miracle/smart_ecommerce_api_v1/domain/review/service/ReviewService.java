@@ -32,6 +32,11 @@ public interface ReviewService {
     PageResponse<ReviewResponse> getReviewsByUserId(UUID userId, int page, int size);
 
     /**
+     * Get paginated list of all reviews
+     */
+    PageResponse<ReviewResponse> getAllReviews(int page, int size);
+
+    /**
      * Get average rating for a product
      */
     Double getAverageRatingForProduct(UUID productId);
@@ -56,4 +61,3 @@ public interface ReviewService {
      */
     long countReviewsByProductId(UUID productId);
 }
-

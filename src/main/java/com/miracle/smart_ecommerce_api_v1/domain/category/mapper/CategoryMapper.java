@@ -19,7 +19,6 @@ public class CategoryMapper implements RowMapper<Category> {
     public Category mapRow(ResultSet rs, int rowNum) throws SQLException {
         return Category.builder()
                 .id(JdbcUtils.getUUID(rs, "id"))
-                .parentCategoryId(JdbcUtils.getUUID(rs, "parent_category_id"))
                 .categoryName(rs.getString("category_name"))
                 .build();
     }

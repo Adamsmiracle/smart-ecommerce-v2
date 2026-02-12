@@ -3,6 +3,7 @@ package com.miracle.smart_ecommerce_api_v1.domain.user.service.impl;
 import com.miracle.smart_ecommerce_api_v1.common.response.PageResponse;
 import com.miracle.smart_ecommerce_api_v1.domain.user.entity.User;
 import com.miracle.smart_ecommerce_api_v1.domain.user.dto.request.CreateUserRequest;
+import com.miracle.smart_ecommerce_api_v1.domain.user.dto.request.UpdateUserRequest;
 import com.miracle.smart_ecommerce_api_v1.domain.user.dto.response.UserResponse;
 import com.miracle.smart_ecommerce_api_v1.domain.user.service.UserService;
 import com.miracle.smart_ecommerce_api_v1.exception.DuplicateResourceException;
@@ -13,7 +14,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.Cacheable;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -34,7 +34,7 @@ public class UserServiceImpl implements UserService {
 
     private final UserRepository userRepository;
     private final CacheManager cacheManager;
-    private final PasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
+    private final PasswordEncoder passwordEncoder;
 
     @Override
     @Transactional
@@ -76,6 +76,7 @@ public class UserServiceImpl implements UserService {
                 .phoneNumber(request.getPhoneNumber())
                 .passwordHash(hashedPassword)
                 .isActive(true)
+                .role(request.getRole())
                 .build();
 
 
@@ -89,7 +90,6 @@ public class UserServiceImpl implements UserService {
 
         UserResponse response = mapToResponse(savedUser);
 
-        // Update cache with new user (multiple keys for different access patterns)
         Cache cache = cacheManager.getCache(USERS_CACHE);
         if (cache != null) {
             cache.put("id:" + savedUser.getId(), response);
@@ -151,7 +151,7 @@ public class UserServiceImpl implements UserService {
 
     @Override
     @Transactional
-    public UserResponse updateUser(UUID id, CreateUserRequest request) {
+    public UserResponse updateUser(UUID id, UpdateUserRequest request) {
         log.info("Updating user with ID: {}", id);
 
         User existingUser = userRepository.findById(id)
@@ -169,9 +169,12 @@ public class UserServiceImpl implements UserService {
         existingUser.setFirstName(request.getFirstName());
         existingUser.setLastName(request.getLastName());
         existingUser.setPhoneNumber(request.getPhoneNumber());
-        if (request.getPassword() != null && !request.getPassword().isEmpty()) {
-            existingUser.setPasswordHash(hashPassword(request.getPassword()));
+        // Update role only if provided
+        if (request.getRole() != null) {
+            existingUser.setRole(request.getRole());
         }
+
+        // Password updates are not allowed via UpdateUserRequest
 
         User updatedUser = userRepository.update(existingUser);
         log.info("User updated successfully: {}", id);
@@ -253,34 +256,6 @@ public class UserServiceImpl implements UserService {
         return userRepository.count();
     }
 
-    @Override
-    @Transactional
-    public void updateUserRoles(UUID id, List<String> roles) {
-        log.info("Updating roles for user {} to {}", id, roles);
-
-        User user = userRepository.findById(id)
-                .orElseThrow(() -> ResourceNotFoundException.forResource("User", id));
-
-        // Normalize roles (ensure ROLE_ prefix)
-        List<String> normalized = roles.stream()
-                .filter(r -> r != null && !r.isBlank())
-                .map(String::trim)
-                .map(r -> r.startsWith("ROLE_") ? r : "ROLE_" + r)
-                .distinct()
-                .collect(Collectors.toList());
-
-        user.setRoles(new java.util.HashSet<>(normalized));
-        userRepository.update(user);
-
-        // Evict cache entries for this user
-        Cache cache = cacheManager.getCache(USERS_CACHE);
-        if (cache != null) {
-            cache.evict("id:" + id);
-            cache.evict("email:" + user.getEmailAddress());
-        }
-
-        log.info("Roles updated for user {}", id);
-    }
 
     // ========================================================================
     // Helper Methods
@@ -292,12 +267,11 @@ public class UserServiceImpl implements UserService {
                 .emailAddress(user.getEmailAddress())
                 .firstName(user.getFirstName())
                 .lastName(user.getLastName())
-                .fullName(user.getFullName())
                 .phoneNumber(user.getPhoneNumber())
                 .isActive(user.getIsActive())
                 .createdAt(user.getCreatedAt())
                 .updatedAt(user.getUpdatedAt())
-                .roles(user.getRoles() == null ? java.util.List.of("ROLE_USER") : user.getRoles().stream().collect(Collectors.toList()))
+                .role(user.getRole())
                 .build();
     }
 
@@ -317,4 +291,3 @@ public class UserServiceImpl implements UserService {
         return passwordEncoder.matches(rawPassword, hashedPassword);
     }
 }
-

@@ -2,7 +2,6 @@ package com.miracle.smart_ecommerce_api_v1.domain.review.service;
 
 import com.miracle.smart_ecommerce_api_v1.common.response.PageResponse;
 import com.miracle.smart_ecommerce_api_v1.domain.review.entity.ProductReview;
-import com.miracle.smart_ecommerce_api_v1.domain.user.entity.User;
 import com.miracle.smart_ecommerce_api_v1.domain.review.dto.CreateReviewRequest;
 import com.miracle.smart_ecommerce_api_v1.domain.review.dto.ReviewResponse;
 import com.miracle.smart_ecommerce_api_v1.exception.DuplicateResourceException;
@@ -18,7 +17,6 @@ import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -64,7 +62,6 @@ public class ReviewServiceImpl implements ReviewService {
                 .productId(request.getProductId())
                 .userId(request.getUserId())
                 .rating(request.getRating())
-                .title(request.getTitle())
                 .comment(request.getComment())
                 .build();
 
@@ -123,6 +120,20 @@ public class ReviewServiceImpl implements ReviewService {
 
     @Override
     @Transactional(readOnly = true)
+    public PageResponse<ReviewResponse> getAllReviews(int page, int size) {
+        log.debug("Getting all reviews - page: {}, size: {}", page, size);
+        List<ProductReview> reviews = reviewRepository.findAll(page, size);
+        long total = reviewRepository.countAll();
+
+        List<ReviewResponse> responses = reviews.stream()
+                .map(this::mapToResponse)
+                .collect(Collectors.toList());
+
+        return PageResponse.of(responses, page, size, total);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public Double getAverageRatingForProduct(UUID productId) {
         log.debug("Getting average rating for product: {}", productId);
         return reviewRepository.getAverageRatingByProductId(productId);
@@ -137,7 +148,6 @@ public class ReviewServiceImpl implements ReviewService {
                 .orElseThrow(() -> ResourceNotFoundException.forResource("Review", id));
 
         existingReview.setRating(request.getRating());
-        existingReview.setTitle(request.getTitle());
         existingReview.setComment(request.getComment());
 
         ProductReview updatedReview = reviewRepository.update(existingReview);
@@ -188,26 +198,14 @@ public class ReviewServiceImpl implements ReviewService {
     // ========================================================================
 
     private ReviewResponse mapToResponse(ProductReview review) {
-        String userName = null;
-        try {
-            User user = userRepository.findById(review.getUserId()).orElse(null);
-            if (user != null) {
-                userName = user.getFullName() != null ? user.getFullName() : user.getEmailAddress();
-            }
-        } catch (Exception e) {
-            log.warn("Could not fetch user name for review: {}", review.getId());
-        }
-
         return ReviewResponse.builder()
                 .id(review.getId())
                 .productId(review.getProductId())
                 .userId(review.getUserId())
-                .userName(userName)
                 .rating(review.getRating())
-                .title(review.getTitle())
                 .comment(review.getComment())
-                .createdAt(OffsetDateTime.from(review.getCreatedAt()))
-                .updatedAt(OffsetDateTime.from(review.getUpdatedAt()))
+                .createdAt(review.getCreatedAt())
+                .updatedAt(review.getUpdatedAt())
                 .build();
     }
 }

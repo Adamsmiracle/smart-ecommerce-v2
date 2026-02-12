@@ -7,7 +7,6 @@ import org.springframework.stereotype.Component;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.time.ZoneOffset;
 
 /**
  * RowMapper for PaymentMethod domain model.
@@ -23,10 +22,8 @@ public class PaymentMethodMapper implements RowMapper<PaymentMethod> {
                 .paymentType(rs.getString("payment_type"))
                 .provider(rs.getString("provider"))
                 .accountNumber(rs.getString("account_number"))
-                .expiryDate(JdbcUtils.getLocalDate(rs, "expiry_date"))
-                .isDefault(JdbcUtils.getBoolean(rs, "is_default"))
-                // FIXED: Convert LocalDateTime to OffsetDateTime properly
-                .createdAt(JdbcUtils.getLocalDateTime(rs, "created_at").toLocalDateTime().atOffset(ZoneOffset.UTC))
+                .expiryDate(JdbcUtils.getOffsetDateTime(rs, "expiry_date"))
+                .createdAt(JdbcUtils.getOffsetDateTime(rs, "created_at"))
                 .build();
     }
 }

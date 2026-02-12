@@ -28,15 +28,6 @@ public interface ProductRepository {
      */
     Optional<Product> findById(UUID id);
 
-    /**
-     * Find product by SKU
-     */
-    Optional<Product> findBySku(String sku);
-
-    /**
-     * Find all products
-     */
-    List<Product> findAll();
 
     /**
      * Find all products with pagination
@@ -79,11 +70,6 @@ public interface ProductRepository {
     boolean existsById(UUID id);
 
     /**
-     * Check if SKU exists
-     */
-    boolean existsBySku(String sku);
-
-    /**
      * Count total products
      */
     long count();
@@ -113,4 +99,3 @@ public interface ProductRepository {
      */
     int[] batchInsert(List<Product> products);
 }
-
