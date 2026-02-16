@@ -15,6 +15,7 @@ import com.miracle.smart_ecommerce_api_v1.domain.order.dto.OrderResponse;
 import com.miracle.smart_ecommerce_api_v1.domain.order.dto.UpdateOrderRequest;
 import com.miracle.smart_ecommerce_api_v1.domain.user.repository.UserRepository;
 import com.miracle.smart_ecommerce_api_v1.exception.ResourceNotFoundException;
+import com.miracle.smart_ecommerce_api_v1.exception.BadRequestException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.Cache;
@@ -26,6 +27,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -206,8 +208,15 @@ public class OrderServiceImpl implements OrderService {
 
         String orderNumber = order.getOrderNumber();
 
-        // Validate status transition
-        validateStatusTransition(order.getStatus(), status);
+        // Special-case cancellation: only allow when order.canBeCancelled()
+        if ("cancelled".equalsIgnoreCase(status)) {
+            if (!order.canBeCancelled()) {
+                throw new BadRequestException("Order cannot be cancelled. Current status: " + order.getStatus());
+            }
+        } else {
+            // Validate status transition for other statuses
+            validateStatusTransition(order.getStatus(), status);
+        }
 
         orderRepository.updateStatus(id, status.toLowerCase());
 
@@ -289,7 +298,7 @@ public class OrderServiceImpl implements OrderService {
 
         // Check if order can be cancelled
         if (!order.canBeCancelled()) {
-            throw new IllegalStateException("Order cannot be cancelled. Current status: " + order.getStatus());
+            throw new BadRequestException("Order cannot be cancelled. Current status: " + order.getStatus());
         }
 
         // Update status to cancelled
@@ -442,9 +451,10 @@ public class OrderServiceImpl implements OrderService {
     }
 
     private void validateStatusTransition(String currentStatus, String newStatus) {
-        // Define valid status transitions
-        // PENDING -> CONFIRMED -> PROCESSING -> SHIPPED -> DELIVERED
-        // Any status -> CANCELLED (if canBeCancelled)
+        // Basic validation
+        if (currentStatus == null || newStatus == null) {
+            throw new BadRequestException("Status values must not be null");
+        }
 
         String current = currentStatus.toLowerCase();
         String next = newStatus.toLowerCase();
@@ -453,19 +463,34 @@ public class OrderServiceImpl implements OrderService {
             return; // No change
         }
 
-        boolean validTransition = switch (current) {
-            case "pending" -> next.equals("confirmed") || next.equals("cancelled");
-            case "confirmed" -> next.equals("processing") || next.equals("cancelled");
-            case "processing" -> next.equals("shipped") || next.equals("cancelled");
-            case "shipped" -> next.equals("delivered");
-            case "delivered", "cancelled" -> false; // Terminal states
-            default -> false;
-        };
-
-        if (!validTransition) {
-            throw new IllegalStateException(
-                    String.format("Invalid status transition from '%s' to '%s'", currentStatus, newStatus));
+        // Allowed statuses
+        Set<String> allowed = Set.of("pending", "confirmed", "processing", "shipped", "delivered", "cancelled");
+        if (!allowed.contains(next)) {
+            throw new BadRequestException("Unknown target status: " + newStatus + ". Allowed: " + String.join(", ", allowed));
         }
+
+        // Terminal states cannot transition to anything else
+        Set<String> terminal = Set.of("delivered", "cancelled");
+        if (terminal.contains(current)) {
+            throw new BadRequestException(String.format("Invalid status transition from '%s' to '%s'", currentStatus, newStatus));
+        }
+
+        // If target is 'delivered', require current be 'shipped'
+        if ("delivered".equals(next)) {
+            if (!"shipped".equals(current)) {
+                throw new BadRequestException(String.format("Invalid status transition from '%s' to '%s'", currentStatus, newStatus));
+            }
+            return;
+        }
+
+        // If target is 'cancelled' we expect caller to have validated canBeCancelled; reject here to be safe
+        if ("cancelled".equals(next)) {
+            throw new BadRequestException("Cancellation must be validated via order.canBeCancelled()");
+        }
+
+        // For non-terminal targets (pending, confirmed, processing, shipped) allow transition from any non-terminal current state
+        // This lets admins move orders among progress statuses
+        return;
     }
 
     /**

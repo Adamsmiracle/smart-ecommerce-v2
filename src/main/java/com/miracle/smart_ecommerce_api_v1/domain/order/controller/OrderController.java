@@ -48,12 +48,19 @@ public class OrderController {
     @Operation(summary = "Get order by ID", description = "Retrieves an order by its unique ID")
     @ApiResponses(value = {
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Order found"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid UUID format"),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Order not found")
     })
     public ResponseEntity<ApiResponse<OrderResponse>> getOrderById(
-            @Parameter(description = "Order ID") @PathVariable UUID id) {
-        OrderResponse order = orderService.getOrderById(id);
-        return ResponseEntity.ok(ApiResponse.success(order));
+            @Parameter(description = "Order ID") @PathVariable String id) {
+        try {
+            UUID uuid = UUID.fromString(id);
+            OrderResponse order = orderService.getOrderById(uuid);
+            return ResponseEntity.ok(ApiResponse.success(order));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error("Invalid UUID format: " + id, 400));
+        }
     }
 
     @GetMapping("/number/{orderNumber}")

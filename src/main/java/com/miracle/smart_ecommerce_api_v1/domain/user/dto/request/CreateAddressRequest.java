@@ -47,4 +47,3 @@ public class CreateAddressRequest {
     @Builder.Default
     private String addressType = "shipping";
 }
-

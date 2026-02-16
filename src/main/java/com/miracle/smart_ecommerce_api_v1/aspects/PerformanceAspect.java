@@ -23,16 +23,22 @@ public class PerformanceAspect {
     private static final long VERY_SLOW_THRESHOLD_MS = 1000;
 
     /**
-     * Pointcut for all service layer methods
+     * Pointcut for all service layer methods (matches project package)
      */
-    @Pointcut("execution(* com.miracle.smart_ecommerce.service.impl.*.*(..))")
+    @Pointcut("within(com.miracle.smart_ecommerce_api_v1..service..*)")
     public void serviceLayerMethods() {}
 
     /**
-     * Pointcut for all controller methods
+     * Pointcut for all controller methods (matches project package)
      */
-    @Pointcut("execution(* com.miracle.smart_ecommerce.controller.*.*(..))")
+    @Pointcut("within(com.miracle.smart_ecommerce_api_v1..controller..*)")
     public void controllerMethods() {}
+
+    /**
+     * Pointcut for all repository methods (matches project package)
+     */
+    @Pointcut("within(com.miracle.smart_ecommerce_api_v1..repository..*)")
+    public void repositoryMethods() {}
 
     /**
      * Around advice - monitors service layer performance
@@ -48,6 +54,14 @@ public class PerformanceAspect {
     @Around("controllerMethods()")
     public Object monitorControllerPerformance(ProceedingJoinPoint joinPoint) throws Throwable {
         return measureAndLog(joinPoint, "Controller");
+    }
+
+    /**
+     * Around advice - monitors repository performance
+     */
+    @Around("repositoryMethods()")
+    public Object monitorRepositoryPerformance(ProceedingJoinPoint joinPoint) throws Throwable {
+        return measureAndLog(joinPoint, "Repository");
     }
 
     private Object measureAndLog(ProceedingJoinPoint joinPoint, String layer) throws Throwable {
