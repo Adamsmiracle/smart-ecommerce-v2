@@ -90,15 +90,19 @@ public class CustomerOrder extends BaseModel {
     public void calculateTotals() {
         if (orderItems == null || orderItems.isEmpty()) {
             this.subtotal = BigDecimal.ZERO;
-            this.total = BigDecimal.ZERO;
-            return;
+        } else {
+            this.subtotal = orderItems.stream()
+                    .map(OrderItem::getTotalPrice)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
         }
 
-        this.subtotal = orderItems.stream()
-                .map(OrderItem::getTotalPrice)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-
-        this.total = subtotal;
+        // Calculate total as subtotal + shipping cost
+        BigDecimal shippingCost = BigDecimal.ZERO;
+        if (shippingMethod != null && shippingMethod.getPrice() != null) {
+            shippingCost = shippingMethod.getPrice();
+        }
+        
+        this.total = subtotal.add(shippingCost);
     }
 
     /**

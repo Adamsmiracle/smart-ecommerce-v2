@@ -7,6 +7,7 @@ import com.miracle.smart_ecommerce_api_v1.domain.order.entity.CustomerOrder.Paym
 import com.miracle.smart_ecommerce_api_v1.domain.order.entity.OrderItem;
 import com.miracle.smart_ecommerce_api_v1.domain.order.repository.OrderItemRepository;
 import com.miracle.smart_ecommerce_api_v1.domain.order.repository.OrderRepository;
+import com.miracle.smart_ecommerce_api_v1.domain.order.repository.ShippingMethodRepository;
 import com.miracle.smart_ecommerce_api_v1.domain.product.entity.Product;
 import com.miracle.smart_ecommerce_api_v1.domain.product.repository.ProductRepository;
 import com.miracle.smart_ecommerce_api_v1.domain.user.entity.User;
@@ -16,6 +17,7 @@ import com.miracle.smart_ecommerce_api_v1.domain.order.dto.UpdateOrderRequest;
 import com.miracle.smart_ecommerce_api_v1.domain.user.repository.UserRepository;
 import com.miracle.smart_ecommerce_api_v1.exception.ResourceNotFoundException;
 import com.miracle.smart_ecommerce_api_v1.exception.BadRequestException;
+import com.miracle.smart_ecommerce_api_v1.domain.order.entity.ShippingMethod;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.Cache;
@@ -45,6 +47,7 @@ public class OrderServiceImpl implements OrderService {
     private final OrderItemRepository orderItemRepository;
     private final UserRepository userRepository;
     private final ProductRepository productRepository;
+    private final ShippingMethodRepository shippingMethodRepository;
     private final CacheManager cacheManager;
 
     @Override
@@ -85,8 +88,17 @@ public class OrderServiceImpl implements OrderService {
             orderItems.add(orderItem);
         }
 
-        // Total equals subtotal (no shipping cost field in schema)
-        BigDecimal total = subtotal;
+        // Fetch shipping method if provided
+        ShippingMethod shippingMethod = null;
+        BigDecimal shippingCost = BigDecimal.ZERO;
+        if (request.getShippingMethodId() != null) {
+            shippingMethod = shippingMethodRepository.findById(request.getShippingMethodId())
+                    .orElseThrow(() -> ResourceNotFoundException.forResource("ShippingMethod", request.getShippingMethodId()));
+            shippingCost = shippingMethod.getPrice() != null ? shippingMethod.getPrice() : BigDecimal.ZERO;
+        }
+
+        // Total equals subtotal + shipping cost
+        BigDecimal total = subtotal.add(shippingCost);
 
         // Create order
         CustomerOrder order = CustomerOrder.builder()
@@ -117,6 +129,7 @@ public class OrderServiceImpl implements OrderService {
         // Load items for response
         savedOrder.setOrderItems(orderItemRepository.findByOrderId(savedOrder.getId()));
         savedOrder.setUser(user);
+        savedOrder.setShippingMethod(shippingMethod);
 
         OrderResponse response = mapToResponse(savedOrder);
 
@@ -601,12 +614,41 @@ public class OrderServiceImpl implements OrderService {
             // attach items to order
             order.setOrderItems(resultingItems);
 
-            // Recalculate subtotal/total
+            // Recalculate subtotal/total with shipping
             BigDecimal newSubtotal = resultingItems.stream()
                     .map(OrderItem::getTotalPrice)
                     .reduce(BigDecimal.ZERO, BigDecimal::add);
             order.setSubtotal(newSubtotal);
-            order.setTotal(newSubtotal);
+            
+            // Calculate total with shipping cost
+            BigDecimal shippingCost = BigDecimal.ZERO;
+            if (order.getShippingMethodId() != null) {
+                ShippingMethod shippingMethod = shippingMethodRepository.findById(order.getShippingMethodId()).orElse(null);
+                if (shippingMethod != null && shippingMethod.getPrice() != null) {
+                    shippingCost = shippingMethod.getPrice();
+                }
+            }
+            order.setTotal(newSubtotal.add(shippingCost));
+        }
+
+        // Recalculate total if shipping method changed but items didn't
+        if (changed && request.getItems() == null && request.getShippingMethodId() != null && 
+            !request.getShippingMethodId().equals(order.getShippingMethodId())) {
+            // Load current order items to get subtotal
+            List<OrderItem> currentItems = orderItemRepository.findByOrderId(id);
+            BigDecimal currentSubtotal = currentItems.stream()
+                    .map(OrderItem::getTotalPrice)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+            
+            // Calculate new shipping cost
+            BigDecimal newShippingCost = BigDecimal.ZERO;
+            ShippingMethod newShippingMethod = shippingMethodRepository.findById(request.getShippingMethodId()).orElse(null);
+            if (newShippingMethod != null && newShippingMethod.getPrice() != null) {
+                newShippingCost = newShippingMethod.getPrice();
+            }
+            
+            order.setSubtotal(currentSubtotal);
+            order.setTotal(currentSubtotal.add(newShippingCost));
         }
 
         if (!changed) {
