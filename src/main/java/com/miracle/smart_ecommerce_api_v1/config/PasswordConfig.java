@@ -1,5 +1,16 @@
 package com.miracle.smart_ecommerce_api_v1.config;
 
-// Duplicate PasswordEncoder bean removed.
-// Use SecurityBeansConfig.passwordEncoder() as the single PasswordEncoder bean for the application.
-// If you need to customize the encoder, edit SecurityBeansConfig.
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
+
+@Configuration
+public class PasswordConfig {
+
+    @Bean
+    public PasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder();
+    }
+}
+

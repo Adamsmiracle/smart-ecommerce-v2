@@ -3,11 +3,13 @@ package com.miracle.smart_ecommerce_api_v1.domain.auth.filter;
 import com.miracle.smart_ecommerce_api_v1.domain.user.repository.UserRepository;
 import com.miracle.smart_ecommerce_api_v1.domain.user.entity.User;
 import org.slf4j.MDC;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
+import org.springframework.web.filter.OncePerRequestFilter;
 
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
-import jakarta.servlet.http.HttpFilter;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
@@ -20,17 +22,24 @@ import java.util.UUID;
  * and does not replace a real security framework.
  */
 @Component
-public class SimpleAuthFilter extends HttpFilter {
+public class SimpleAuthFilter extends OncePerRequestFilter {
 
+    private static final Logger log = LoggerFactory.getLogger(SimpleAuthFilter.class);
     private final UserRepository userRepository;
 
     public SimpleAuthFilter(UserRepository userRepository) {
         this.userRepository = userRepository;
+        log.info("SimpleAuthFilter instantiated and ready to process requests");
     }
 
     @Override
-    protected void doFilter(HttpServletRequest req, HttpServletResponse res, FilterChain chain) throws IOException, ServletException {
-        String userIdHeader = req.getHeader("X-User-Id");
+    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) 
+            throws ServletException, IOException {
+        String userIdHeader = request.getHeader("X-User-Id");
+        String requestURI = request.getRequestURI();
+        
+        log.info("SimpleAuthFilter processing request: {} with X-User-Id: {}", requestURI, userIdHeader);
+        
         if (userIdHeader != null && !userIdHeader.isBlank()) {
             try {
                 UUID userId = UUID.fromString(userIdHeader);
@@ -39,17 +48,24 @@ public class SimpleAuthFilter extends HttpFilter {
                     User u = maybe.get();
                     MDC.put("userId", u.getId().toString());
                     MDC.put("userRole", u.getRole());
+                    log.info("User context added to MDC: userId={}, role={}", u.getId(), u.getRole());
+                } else {
+                    log.warn("X-User-Id header contained unknown userId: {}", userIdHeader);
                 }
             } catch (IllegalArgumentException e) {
-                // invalid UUID - ignore
+                log.warn("X-User-Id header contained invalid UUID: {}", userIdHeader);
             }
+        } else {
+            log.info("No X-User-Id header found in request: {}", requestURI);
         }
 
         try {
-            chain.doFilter(req, res);
+            filterChain.doFilter(request, response);
         } finally {
+            // Always clean up MDC to prevent context leakage
             MDC.remove("userId");
             MDC.remove("userRole");
+            log.info("MDC context cleared for request: {}", requestURI);
         }
     }
 }

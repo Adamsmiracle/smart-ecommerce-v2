@@ -32,29 +32,6 @@ public final class DateUtils {
     }
 
     /**
-     * Format LocalDateTime to ISO format
-     */
-    public static String formatDateTimeISO(LocalDateTime dateTime) {
-        if (dateTime == null) return null;
-        return dateTime.format(ISO_FORMATTER);
-    }
-
-    /**
-     * Parse string to LocalDateTime using default format
-     */
-    public static LocalDateTime parseDateTime(String dateTimeStr) {
-        if (dateTimeStr == null || dateTimeStr.isEmpty()) return null;
-        return LocalDateTime.parse(dateTimeStr, DATETIME_FORMATTER);
-    }
-
-    /**
-     * Get current UTC time
-     */
-    public static OffsetDateTime nowUTC() {
-        return ZonedDateTime.now(ZoneId.of("UTC")).toOffsetDateTime();
-    }
-
-    /**
      * Get current local time
      */
     public static OffsetDateTime now() {

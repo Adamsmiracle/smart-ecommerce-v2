@@ -13,7 +13,6 @@ public class SwaggerMvcConfig implements WebMvcConfigurer {
 
     @Override
     public void extendMessageConverters(List<HttpMessageConverter<?>> converters) {
-        // Make sure ByteArray converter is first so binary content is handled correctly
         try {
             converters.removeIf(c -> c instanceof ByteArrayHttpMessageConverter);
             converters.add(0, new ByteArrayHttpMessageConverter());
