@@ -71,80 +71,12 @@ Metrics to capture:
 
 Save these scripts and run with `k6 run`. Adjust `vus` and `duration` per environment.
 
-File: `k6/graphql-test.js`
-```javascript
-import http from 'k6/http';
-import { check, sleep } from 'k6';
-
-export let options = {
-  vus: 50,
-  duration: '3m',
-};
-
-const BASE = 'http://localhost:8080/graphql';
-const headers = { 'Content-Type': 'application/json' };
-
-const query = `
-query($page:Int,$size:Int){
-  products(page:$page,size:$size){
-    content {
-      id
-      name
-      price
-      reviewCount
-    }
-    pageNumber
-  }
-}
-`;
-
-export default function () {
-  let payload = JSON.stringify({ query: query, variables: { page: 0, size: 10 } });
-  let res = http.post(BASE, payload, { headers });
-  check(res, { 'graphql ok': (r) => r.status === 200 });
-  sleep(1);
-}
-```
-
-File: `k6/rest-test.js`
-```javascript
-import http from 'k6/http';
-import { check, sleep } from 'k6';
-
-export let options = {
-  vus: 50,
-  duration: '3m',
-};
-
-const BASE = 'http://localhost:8080';
-const headers = { 'Content-Type': 'application/json' };
-
-export default function () {
-  // list products
-  let res = http.get(`${BASE}/api/products?page=0&size=10`, { headers });
-  check(res, { 'products listed': (r) => r.status === 200 });
-
-  // fetch details for first 3 products and their reviews
-  let parsed = JSON.parse(res.body);
-  let products = parsed && parsed.data && parsed.data.content ? parsed.data.content : [];
-  for (let i = 0; i < Math.min(3, products.length); i++) {
-    let id = products[i].id;
-    let r2 = http.get(`${BASE}/api/products/${id}`, { headers });
-    check(r2, { 'product detail ok': (r) => r.status === 200 });
-    let r3 = http.get(`${BASE}/api/reviews/product/${id}`, { headers });
-    check(r3, { 'product reviews ok': (r) => r.status === 200 });
-  }
-  sleep(1);
-}
-```
-
 How to run:
 
 ```powershell
 k6 run k6/graphql-test.js
 k6 run k6/rest-test.js
 ```
-
 ---
 
 ## How to measure DB queries per request

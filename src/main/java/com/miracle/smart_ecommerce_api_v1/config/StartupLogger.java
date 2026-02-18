@@ -41,12 +41,5 @@ public class StartupLogger implements ApplicationRunner {
             }
         });
 
-        System.out.println("[StartupLogger] Checking JVM system properties containing 'spring.jackson' or 'WRITE_DATES'...");
-        Properties sysProps = System.getProperties();
-        sysProps.stringPropertyNames().stream()
-                .filter(k -> k != null && (k.startsWith("spring.jackson") || k.toUpperCase().contains("WRITE_DATES") || k.toUpperCase().contains("WRITE-DATES")))
-                .forEach(k -> System.out.println("[SYSPROP] " + k + "=" + sysProps.getProperty(k)));
-
-        System.out.println("[StartupLogger] End of debug dump.");
     }
 }

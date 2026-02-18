@@ -66,7 +66,7 @@ public class AuthServiceImpl implements AuthService {
 
         String role = user.getRole();
         if (role == null) {
-            role = "USER"; // fallback default
+            role = "CUSTOMER"; // fallback default
         }
 
         log.info("User authenticated: id={}, email={}", user.getId(), normalizedEmail);

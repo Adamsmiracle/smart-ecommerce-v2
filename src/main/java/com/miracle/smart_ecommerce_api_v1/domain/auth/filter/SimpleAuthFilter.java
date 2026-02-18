@@ -38,6 +38,12 @@ public class SimpleAuthFilter extends OncePerRequestFilter {
         String userIdHeader = request.getHeader("X-User-Id");
         String requestURI = request.getRequestURI();
         
+        // Skip auth processing for public endpoints
+        if (isPublicEndpoint(requestURI)) {
+            filterChain.doFilter(request, response);
+            return;
+        }
+        
         log.info("SimpleAuthFilter processing request: {} with X-User-Id: {}", requestURI, userIdHeader);
         
         if (userIdHeader != null && !userIdHeader.isBlank()) {
@@ -67,5 +73,17 @@ public class SimpleAuthFilter extends OncePerRequestFilter {
             MDC.remove("userRole");
             log.info("MDC context cleared for request: {}", requestURI);
         }
+    }
+
+    /**
+     * Determines if the endpoint is public and doesn't require authentication
+     */
+    private boolean isPublicEndpoint(String requestURI) {
+        return requestURI.startsWith("/api/products") ||
+               requestURI.startsWith("/api/categories") ||
+               requestURI.startsWith("/api/auth") ||
+               requestURI.equals("/api/health") ||
+               requestURI.startsWith("/swagger-ui") ||
+               requestURI.startsWith("/v3/api-docs");
     }
 }
